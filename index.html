@@ -13,7 +13,7 @@
 <div class="shell">
   <header class="header">
     <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="#b4fff0" stroke-width="2.2" stroke-linejoin="round"><path d="M16 2 28 7v9c0 8.5-6 12.5-12 14C10 28.5 4 24.5 4 16V7z"/><path d="M16 8v15M9 15.5h14" stroke-width="3"/></svg></div>
-    <div class="brand-copy"><div class="eyebrow">CYBERSECURITY TOWER DEFENSE</div><h1>HOSPITAL <span>DEFENSE</span> <span class="version">B / STANDARD 3.0</span></h1></div>
+    <div class="brand-copy"><div class="eyebrow">CYBERSECURITY TOWER DEFENSE</div><h1>HOSPITAL <span>DEFENSE</span> <span class="version">B / STANDARD 3.1</span></h1></div>
     <div class="header-right">
       <span class="header-note"><span class="live-dot"></span> OFFLINE MODE / 通信なし</span>
       <button class="btn" id="helpBtn" type="button">？ 遊び方</button>
@@ -47,10 +47,14 @@
         </div>
         <div class="quick-tower" id="quickTower" aria-label="選択中の設備"></div>
       </div>
-      <div class="map-wrap"><canvas id="board" width="960" height="560" tabindex="0" aria-label="防衛マップ。設置地点の丸を直接タップして設備を設置・選択できます。">このブラウザはCanvasをサポートしていません。</canvas><div class="pad-hit-layer" id="padHitLayer" aria-label="マップ上の設置地点"></div><div class="canvas-badge">● マップ上の丸を直接タップ</div><div class="map-status" id="mapMessage">WAVE 1 / STANDBY</div></div>
+      <div class="map-wrap"><canvas id="board" width="960" height="560" tabindex="0" aria-label="防衛マップ。設置地点の丸を直接タップして設備を設置・選択できます。">このブラウザはCanvasをサポートしていません。</canvas><div class="pad-hit-layer" id="padHitLayer" aria-label="マップ上の設置地点"></div><div class="canvas-badge">● 空き地点 → 設備選択 → 射程確認 → 設置確定</div><div class="map-status" id="mapMessage">WAVE 1 / STANDBY</div>
+        <section class="placement-bar" id="placementBar" aria-label="仮配置の確認" aria-live="polite" hidden>
+          <div class="placement-summary"><span class="placement-step">PLACEMENT PREVIEW / 仮配置中</span><strong id="placementTitle">設置位置を選択してください</strong><span id="placementInfo">設備と射程を確認してから設置できます。</span></div>
+          <div class="placement-buttons"><button type="button" id="confirmPlacementBtn" class="btn btn-primary">✓ 設置確定</button><button type="button" id="changePlacementBtn" class="btn">設備を変更</button><button type="button" id="cancelPlacementBtn" class="btn">キャンセル</button></div>
+        </section></div>
       <details class="pad-picker"><summary>⌗ 番号から配置・選択する（補助操作）</summary><div class="mobile-pads"><span class="mobile-pads-label">地点<br>番号</span><div class="mobile-pads-row" id="mobilePads" aria-label="配置番号を選択"></div></div></details>
       <div class="wave-track"><span id="waveLabel">次：不審メールの増加</span><div class="track"><i id="waveProgress"></i></div><span id="waveCounter">0 / 0</span></div>
-      <div class="board-bottom"><button class="btn btn-primary" id="startBtn" type="button">▶ ウェーブ開始</button><button class="btn" id="pauseBtn" type="button" disabled>Ⅱ 一時停止</button><button class="btn" id="speedBtn" type="button">×1 通常速度</button><button class="btn" id="bcpBtn" type="button" title="診療継続策として一部の代替運用を実施します">▣ BCP発動（130 SP）</button><span class="hint">1〜4でタワー選択 / Spaceで一時停止<br>上のメニューボタンでショップ・強化・教育を開閉</span></div>
+      <div class="board-bottom"><button class="btn btn-primary" id="startBtn" type="button">▶ ウェーブ開始</button><button class="btn" id="pauseBtn" type="button" disabled>Ⅱ 一時停止</button><button class="btn" id="speedBtn" type="button">×1 通常速度</button><button class="btn" id="bcpBtn" type="button" title="診療継続策として一部の代替運用を実施します">▣ BCP発動（130 SP）</button><span class="hint">設置地点 → ショップ → 射程プレビュー → 設置確定<br>1〜4で設備選択 / Spaceで一時停止</span></div>
     </section>
 
   </main>
@@ -64,9 +68,9 @@
   </div>
   <div class="drawer-body">
     <section class="drawer-view" id="shopView" data-panel-view="shop" aria-label="防御設備ショップ">
-      <p class="drawer-intro">設備を選ぶとパネルが閉じます。次にマップ上の <strong>＋</strong> を直接押して配置してください。</p>
+      <p class="drawer-intro" id="shopIntro">空き設置地点を選ぶと、その地点に置く設備を選べます。</p><div class="shop-location" id="shopLocation" hidden></div>
       <div class="shop" id="shop"></div>
-      <p class="drawer-note">配置後、その設備をもう一度タップすると強化・売却ができます。ショートカット：1〜4</p>
+      <p class="drawer-note">各設備の射程はゲーム内マップの相対距離です。選択後、マップ上で円形のカバー範囲を確認し、「設置確定」でSPを消費します。</p>
     </section>
     <section class="drawer-view" id="upgradeView" data-panel-view="upgrade" aria-label="設備の強化・売却" hidden>
       <p class="drawer-intro">マップ上の配置済み設備を選ぶと、ここに強化内容を表示します。</p>

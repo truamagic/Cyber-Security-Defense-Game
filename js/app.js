@@ -8,9 +8,11 @@
   const $=id=>document.getElementById(id);
   let game={},lastTime=0,toastTimer=null,raf=0,visualT=0,hoverPad=-1;
   let currentDrawer=null,drawerReturnFocus=null;
+  let placement=null,hoverPreviewType=null; // pad/type are provisional until confirm; no SP spent yet.
   function openDrawer(panel){
     if(!PANEL_CONFIG[panel]||$('modalBackdrop').classList.contains('open'))return;
-    if(currentDrawer===panel){closeDrawer();return}
+    if(placement && panel!=='shop')cancelPlacement({quiet:true});
+    if(currentDrawer===panel){if(panel==='shop'&&placement&&!placement.type)cancelPlacement({quiet:true});closeDrawer();return}
     if(!currentDrawer)drawerReturnFocus=document.activeElement;
     currentDrawer=panel;
     $('drawerTitle').textContent=PANEL_CONFIG[panel].title;
@@ -49,7 +51,7 @@
   function resetGame(){
     closeDrawer({restoreFocus:false});
     game={phase:'ready',wave:0,sp:360,integrity:100,privacy:100,score:0,kills:0,leaks:0,towers:PADS.map(()=>null),selectedType:'mail',selectedPad:-1,trainingLevel:0,sideRouteOpen:false,waveEvents:[],notice:'',noticeLeft:0,enemies:[],effects:[],queue:[],spawnIndex:0,spawnTimer:0,spawned:0,spawnTotal:0,time:0,speed:1,paused:false,bcpUsed:false,events:[]};
-    hoverPad=-1;lastTime=0;addLog('病院の防衛準備を開始しました。','info');addLog('ショップで設備を選び、マップの＋に配置してください。','info');refreshUI();
+    hoverPad=-1;placement=null;hoverPreviewType=null;lastTime=0;addLog('病院の防衛準備を開始しました。','info');addLog('マップの空き地点を選び、ショップで設備を選択後、射程を確認して設置してください。','info');refreshUI();
   }
   function posAt(distance,route='main'){const nodes=route==='side'?SIDE_PATH:PATH,part=route==='side'?SECONDARY:PRIMARY;let d=Math.max(0,Math.min(part.total,distance)),last=0;for(let i=0;i<part.sections.length;i++){if(d<=part.sections[i]){const t=(d-last)/(part.sections[i]-last),a=nodes[i],b=nodes[i+1];return {x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t}}last=part.sections[i]}return {...nodes[nodes.length-1]}}
   function money(n){return n.toLocaleString('ja-JP')}
@@ -57,18 +59,112 @@
   function addLog(message,kind='info'){game.events.unshift({message,kind});game.events.length=Math.min(5,game.events.length);renderLog()}
   function renderLog(){const log=$('log');log.textContent='';for(const item of game.events){const el=document.createElement('div');el.className='log-item '+(item.kind==='warn'?'warn':item.kind==='danger'?'danger':'');const dot=document.createElement('span');dot.className='log-dot';const txt=document.createElement('span');txt.textContent=item.message;el.append(dot,txt);log.append(el)}}
   function toast(message){const el=$('toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2400)}
-  function pressPad(i){if(game.phase==='won'||game.phase==='lost')return;if(game.towers[i]){game.selectedPad=i;renderDetail();renderQuickTower();renderMobilePads();syncPadButtons();openDrawer('upgrade')}else buyTower(i)}
+  // Placement workflow: pick a location → choose a tower → inspect true radius → confirm.
+  // An active wave is paused during this deliberate choice, then resumed only if
+  // the placement flow itself initiated the pause.
+  function holdForPlacement(){
+    const autoResume=game.phase==='active'&&!game.paused;
+    if(autoResume)game.paused=true;
+    return autoResume;
+  }
+  function beginPlacement(i){
+    if(['won','lost'].includes(game.phase)||game.towers[i])return;
+    if(!placement)placement={pad:i,type:null,autoResume:holdForPlacement()};
+    else placement.pad=i;
+    game.selectedPad=i;
+    hoverPreviewType=null;
+    refreshUI();
+    if(!placement.type){openDrawer('shop')}
+    else{closeDrawer({restoreFocus:false})}
+  }
+  function choosePlacementType(id){
+    if(!TOWERS[id]||['won','lost'].includes(game.phase))return;
+    if(!placement)placement={pad:-1,type:id,autoResume:holdForPlacement()};
+    else placement.type=id;
+    game.selectedType=id;
+    hoverPreviewType=null;
+    refreshUI();
+    closeDrawer({restoreFocus:false});
+    // Focus an enabled control after the shop closes; disabled confirms
+    // cannot receive keyboard focus and would leave focus in the hidden drawer.
+    const focusTarget=placement.pad<0
+      ?$('padHitLayer').querySelector('.map-pad-btn:not(.occupied)')
+      :($('confirmPlacementBtn').disabled?$('changePlacementBtn'):$('confirmPlacementBtn'));
+    focusTarget?.focus({preventScroll:true});
+    // The visible placement bar already explains the next action; do not obscure the map with a toast.
+  }
+  function cancelPlacement({quiet=false}={}){
+    if(!placement)return;
+    const resume=placement.autoResume;
+    placement=null;hoverPreviewType=null;game.selectedPad=-1;
+    if(resume&&game.phase==='active')game.paused=false;
+    refreshUI();
+    if(!quiet)toast('仮配置をキャンセルしました（SPは消費していません）');
+  }
+  function confirmPlacement(){
+    if(!placement||placement.pad<0||!placement.type||['won','lost'].includes(game.phase))return;
+    const {pad,type,autoResume}=placement,base=TOWERS[type];
+    if(game.towers[pad]){toast('その地点には既に設備があります');return}
+    if(game.sp<base.cost){toast('SPが不足しています。別の設備を選んでください。');return}
+    // Spend SP only after the player explicitly confirms the range preview.
+    game.sp-=base.cost;
+    game.towers[pad]={type,level:1,cooldown:.2,invested:base.cost};
+    placement=null;hoverPreviewType=null;game.selectedPad=pad;
+    if(autoResume&&game.phase==='active')game.paused=false;
+    addLog(`地点 ${pad+1} に${base.name}を設置（-${base.cost} SP）`);
+    toast(`${base.short}を地点 ${pad+1} に設置しました`);
+    refreshUI();
+  }
+  function renderPlacementBar(){
+    const bar=$('placementBar');bar.hidden=!placement;
+    document.body.classList.toggle('placement-active',!!placement);
+    if(!placement)return;
+    const hasPad=placement.pad>=0,base=placement.type?TOWERS[placement.type]:null;
+    $('placementTitle').textContent=hasPad?(base?`地点 ${placement.pad+1}｜${base.name}`:`地点 ${placement.pad+1}｜設置する設備を選択`):`${base?base.name+'｜':''}設置場所を選択`;
+    $('placementInfo').textContent=!base?'ショップで設備を選ぶと射程をプレビューできます。':!hasPad?`必要SP ${base.cost} / 射程 ${base.range}（マップ単位）。空き地点をタップしてください。`:`射程 ${base.range}（マップ単位）・必要SP ${base.cost} / 所持 ${game.sp} SP${game.sp<base.cost?' ⚠ SP不足':''}`;
+    $('confirmPlacementBtn').disabled=!hasPad||!base||game.sp<base.cost||!!game.towers[placement.pad];
+    $('confirmPlacementBtn').textContent=base?`✓ 設置確定（${base.cost} SP）`:'✓ 設置確定';
+    $('changePlacementBtn').textContent=base?'設備を変更':'設備を選択';
+  }
+  function pressPad(i){
+    if(game.phase==='won'||game.phase==='lost')return;
+    if(game.towers[i]){
+      if(placement)cancelPlacement({quiet:true});
+      game.selectedPad=i;renderDetail();renderQuickTower();renderMobilePads();syncPadButtons();openDrawer('upgrade');
+    }else beginPlacement(i);
+  }
   function initializePadButtons(){const layer=$('padHitLayer');layer.textContent='';PADS.forEach((p,i)=>{const btn=document.createElement('button');btn.type='button';btn.className='map-pad-btn';btn.style.left=(100*p.x/W)+'%';btn.style.top=(100*p.y/H)+'%';btn.dataset.pad=String(i);btn.addEventListener('click',()=>pressPad(i));layer.append(btn)})}
-  function syncPadButtons(){for(const b of $('padHitLayer').children){const i=Number(b.dataset.pad),t=game.towers[i];b.className='map-pad-btn'+(t?' occupied':'')+(game.selectedPad===i?' selected':'');b.setAttribute('aria-label',`地点 ${i+1}：${t?TOWERS[t.type].name+' Lv.'+t.level+'を選択':'現在選んでいる'+TOWERS[game.selectedType].name+'を配置'}`);b.title=t?`地点${i+1} ${TOWERS[t.type].name} Lv.${t.level} / タップして強化`:`地点${i+1} に${TOWERS[game.selectedType].name}を設置`}}
+  function syncPadButtons(){for(const b of $('padHitLayer').children){const i=Number(b.dataset.pad),t=game.towers[i];b.className='map-pad-btn'+(t?' occupied':'')+(game.selectedPad===i?' selected':'')+(placement?.pad===i?' pending':'');b.setAttribute('aria-label',`地点 ${i+1}：${t?TOWERS[t.type].name+' Lv.'+t.level+'を選択':placement?.pad===i?'設置プレビュー中、設備を選択する':'空き地点、押すと設備ショップが開く'}`);b.title=t?`地点${i+1} ${TOWERS[t.type].name} Lv.${t.level} / タップして強化`:`地点${i+1}：押して設置する設備を選択`}}
   function renderQuickTower(){const el=$('quickTower'),pad=game.selectedPad,t=pad>=0?game.towers[pad]:null;el.textContent='';const wrap=document.createElement('div');wrap.className='quick-text';const name=document.createElement('span');name.className='quick-name';const desc=document.createElement('span');desc.className='quick-desc';wrap.append(name,desc);el.append(wrap);
-    if(!t){name.textContent='設置待ち：'+TOWERS[game.selectedType].name;desc.textContent='ショップで変更 → マップ上の＋をタップして配置';return}
+    if(!t){name.textContent=placement?'地点 '+(placement.pad>=0?placement.pad+1:'選択待ち')+'｜仮配置中':'防御設備の設置';desc.textContent=placement?'射程を見て「設置確定」を押してください':'マップ上の＋を押すとショップが開きます';return}
     const base=TOWERS[t.type],next=base.upgrade[t.level-1];name.textContent=`地点 ${pad+1}｜${base.short} Lv.${t.level}/3`;desc.textContent=t.level===3?'最大強化済み':`次の強化：${next} SP`;
     const btn=document.createElement('button');btn.type='button';btn.className='btn btn-primary quick-upgrade-btn';btn.textContent='強化・管理';btn.addEventListener('click',()=>openDrawer('upgrade'));el.append(btn)}
   function renderTraining(){const lv=game.trainingLevel,cost=TRAINING_COSTS[lv],reduction=Math.round((1-TRAINING_SPEED[lv])*100);$('trainingLevel').textContent=`職員教育 Lv.${lv} / 3`;$('trainingDesc').textContent=lv===0?'未実施：人的リスク型は通常速度で侵攻。研修で早期発見・報告を促す。':`人的リスク型の侵攻速度 −${reduction}%。研修による早期発見・報告をゲーム内の遅延効果として表現。`;[...$('trainingBars').children].forEach((b,i)=>b.classList.toggle('done',i<lv));const btn=$('trainingBtn');btn.textContent=lv===3?'✓ 教育体制 MAX':`職員教育を強化　${cost} SP`;btn.disabled=lv===3||game.sp<cost||['won','lost'].includes(game.phase)}
   function upgradeTraining(){const lv=game.trainingLevel,cost=TRAINING_COSTS[lv];if(lv>=3||game.sp<cost||['won','lost'].includes(game.phase))return;game.sp-=cost;game.trainingLevel++;addLog(`職員教育をLv.${game.trainingLevel}に強化（-${cost} SP）`);toast(`教育 Lv.${game.trainingLevel}：人的リスク型の侵攻が減速`);refreshUI()}
   function renderMobilePads(){const el=$('mobilePads');el.textContent='';for(let i=0;i<PADS.length;i++){const t=game.towers[i],btn=document.createElement('button');btn.type='button';btn.className='slot-btn'+(t?' occupied':'')+(game.selectedPad===i?' selected':'');btn.setAttribute('aria-label',`配置場所 ${i+1}：${t?TOWERS[t.type].name:'空き'}`);btn.innerHTML=`<strong>${String(i+1).padStart(2,'0')}</strong><small>${t?TOWERS[t.type].short:'＋ 空き'}</small>`;btn.addEventListener('click',()=>pressPad(i));el.append(btn)}}
-  function renderShop(){const el=$('shop');el.innerHTML='';for(const [idx,id] of Object.keys(TOWERS).entries()){const t=TOWERS[id],btn=document.createElement('button');btn.type='button';btn.dataset.id=id;btn.className='shop-item'+(game.selectedType===id?' active':'');btn.setAttribute('aria-pressed',game.selectedType===id?'true':'false');btn.innerHTML=`<span class="shop-icon">${iconSVG[t.icon]}</span><span class="shop-main"><span class="shop-name">${t.name}</span><span class="shop-desc">${t.desc}</span><span class="shop-extra">設置後 Lv.3まで強化可能</span></span><span class="price">${t.cost}<span>SP</span></span><span class="shop-hotkey">${idx+1}</span>`;btn.addEventListener('click',()=>{game.selectedType=id;game.selectedPad=-1;renderShop();renderDetail();renderQuickTower();syncPadButtons();closeDrawer({restoreFocus:false});canvas.focus({preventScroll:true});toast(t.name+'を選択：マップの丸をタップ');});el.append(btn)}}
-  function renderDetail(){const detail=$('detail'),pad=game.selectedPad,tower=pad>=0?game.towers[pad]:null;detail.innerHTML='';if(!tower){detail.innerHTML=`<div class="empty-detail">${game.selectedType?'「'+TOWERS[game.selectedType].name+'」を選択中。マップ上の <strong>＋</strong> を押すと配置できます。':'配置済みの設備を選ぶと、詳細が表示されます。'}</div>`;return}
+  function renderShop(){
+    const el=$('shop');el.innerHTML='';
+    const placed=placement&&placement.pad>=0;
+    $('shopIntro').textContent=placed?`地点 ${placement.pad+1} に設置する設備を選んでください。選択後、射程の円を確認してから確定できます。`:'設備を選ぶとマップに戻ります。空き地点をタップして射程を確認してから確定してください。';
+    $('shopLocation').hidden=!placed;
+    if(placed)$('shopLocation').textContent=`◉ 選択中の設置地点：No.${String(placement.pad+1).padStart(2,'0')} ｜ 現在 ${game.sp} SP`;
+    for(const [idx,id] of Object.keys(TOWERS).entries()){
+      const t=TOWERS[id],btn=document.createElement('button');
+      btn.type='button';btn.dataset.id=id;
+      const active=placement?.type===id;
+      btn.className='shop-item'+(active?' active':'')+(game.sp<t.cost?' is-unaffordable':'');
+      btn.setAttribute('aria-pressed',String(!!active));
+      btn.innerHTML=`<span class="shop-icon">${iconSVG[t.icon]}</span><span class="shop-main"><span class="shop-name">${t.name}</span><span class="shop-desc">${t.desc}</span><span class="shop-extra">射程 <span class="shop-range">${t.range}</span> / Lv.1 ・ 最大Lv.3${game.sp<t.cost?' <span class="shop-warning">（SP不足）</span>':''}</span><span class="shop-range-meter" aria-hidden="true"><i style="width:${Math.round(t.range/180*100)}%;background:${t.color}"></i></span></span><span class="price">${t.cost}<span>SP</span></span><span class="shop-hotkey">${idx+1}</span>`;
+      // On desktop, hovering a candidate previews the coverage even while the shop is open.
+      btn.addEventListener('pointerenter',()=>{if(placement?.pad>=0){hoverPreviewType=id;btn.dataset.preview='true'}});
+      btn.addEventListener('pointerleave',()=>{hoverPreviewType=null;btn.dataset.preview='false'});
+      btn.addEventListener('focus',()=>{if(placement?.pad>=0)hoverPreviewType=id});
+      btn.addEventListener('blur',()=>{hoverPreviewType=null});
+      btn.addEventListener('click',()=>choosePlacementType(id));
+      el.append(btn);
+    }
+  }
+  function renderDetail(){const detail=$('detail'),pad=game.selectedPad,tower=pad>=0?game.towers[pad]:null;detail.innerHTML='';if(!tower){detail.innerHTML=`<div class="empty-detail">${game.selectedType?'マップ上の空き地点を押し、ショップで設備を選び、射程を確認してから設置してください。':'配置済みの設備を選ぶと、詳細が表示されます。'}</div>`;return}
     const base=TOWERS[tower.type],s=levelStats(tower),next=base.upgrade[tower.level-1],refund=Math.round(tower.invested*.65);
     const head=document.createElement('div');head.className='detail-title';head.innerHTML=`<span>${base.name}</span><em>LV.${tower.level} / ${MAX_LEVEL}</em>`;detail.append(head);
     const p=document.createElement('div');p.className='detail-desc';p.textContent=base.desc;detail.append(p);const perk=document.createElement('div');perk.className='upgrade-perk';perk.textContent=base.perk;detail.append(perk);
@@ -84,20 +180,19 @@
     const phaseNames={ready:'配置準備中',active:game.paused?'一時停止中':'防衛中',intermission:'強化フェーズ',won:'防衛成功',lost:'ミッション失敗'};
     $('phaseText').textContent=phaseNames[game.phase];$('phaseBadge').className='mini-status '+(active?'is-active':game.phase==='lost'?'is-failed':'');
     $('mapMessage').textContent=game.phase==='won'?'MISSION COMPLETE':game.phase==='lost'?'MISSION FAILED':active?`WAVE ${game.wave} / ACTIVE`:game.wave===0?'WAVE 1 / STANDBY':`WAVE ${Math.min(game.wave+1,5)} / STANDBY`;
-    $('startBtn').disabled=active||finished||game.wave>=5;$('startBtn').textContent=game.wave===0?'▶ ウェーブ 1 開始':game.phase==='intermission'?`▶ ウェーブ ${game.wave+1} 開始`:'▶ ウェーブ開始';
-    $('pauseBtn').disabled=!active;$('pauseBtn').textContent=game.paused?'▶ 再開':'Ⅱ 一時停止';
+    $('startBtn').disabled=active||finished||game.wave>=5||!!placement;$('startBtn').textContent=game.wave===0?'▶ ウェーブ 1 開始':game.phase==='intermission'?`▶ ウェーブ ${game.wave+1} 開始`:'▶ ウェーブ開始';
+    $('pauseBtn').disabled=!active||!!placement;$('pauseBtn').textContent=placement&&active?'◎ 設置中は停止':game.paused?'▶ 再開':'Ⅱ 一時停止';
     $('speedBtn').textContent=game.speed===1?'×1 通常速度':'×2 倍速';
     $('bcpBtn').disabled=finished||game.sp<BCP_COST||game.integrity>=100||game.bcpUsed;$('bcpBtn').textContent=game.bcpUsed?'✓ BCP使用済み':`▣ BCP発動（${BCP_COST} SP）`;
     const current=WAVE_DEFS[game.wave-1],upcoming=WAVE_DEFS[game.wave];
     $('waveLabel').textContent=active?`進行中：${current.title}`:game.phase==='intermission'&&upcoming?`次：${upcoming.title}`:game.phase==='won'?'全ウェーブ防衛完了':game.phase==='lost'?'病院の防衛機能が停止':upcoming?`次：${upcoming.title}`:'最終結果';
     $('waveCounter').textContent=active?`${game.spawned} / ${game.spawnTotal} 出現・残 ${game.enemies.length}`:game.phase==='intermission'?`${game.wave} / 5 クリア`:game.phase==='won'?'5 / 5':game.phase==='lost'?`${game.wave} / 5`:'0 / 5';
     $('waveProgress').style.width=(active&&game.spawnTotal?game.spawned/game.spawnTotal*100:game.phase==='won'?100:0)+'%';
-    renderShop();renderDetail();renderMobilePads();renderQuickTower();renderTraining();syncPadButtons();
+    renderShop();renderDetail();renderMobilePads();renderQuickTower();renderTraining();syncPadButtons();renderPlacementBar();
   }
-  function buyTower(i){if(game.towers[i]){pressPad(i);return}const type=game.selectedType,base=TOWERS[type];if(!base)return;if(game.sp<base.cost){toast('SPが足りません。ウェーブでSPを獲得しましょう。');return}if(game.phase==='won'||game.phase==='lost')return;game.sp-=base.cost;game.towers[i]={type,level:1,cooldown:.2,invested:base.cost};game.selectedPad=i;addLog(`${base.name}を配置（-${base.cost} SP）`);refreshUI()}
   function upgradeTower(i){const t=game.towers[i];if(!t||t.level>=MAX_LEVEL)return;const cost=TOWERS[t.type].upgrade[t.level-1];if(game.sp<cost){toast('SPが足りません');return}game.sp-=cost;t.invested+=cost;t.level++;addLog(`${TOWERS[t.type].short}を Lv.${t.level} に強化（-${cost} SP）`);refreshUI()}
   function sellTower(i){const t=game.towers[i];if(!t)return;const amount=Math.round(t.invested*.65);game.sp+=amount;addLog(`${TOWERS[t.type].name}を売却（+${amount} SP）`);game.towers[i]=null;game.selectedPad=-1;refreshUI()}
-  function startWave(){if(game.phase!=='ready'&&game.phase!=='intermission')return;if(game.wave>=WAVE_DEFS.length)return;game.wave++;const wave=WAVE_DEFS[game.wave-1];game.phase='active';game.queue=wave.units.slice();game.spawned=0;game.waveEvents=(EVENT_PLANS[game.wave]||[]).map(e=>({...e,at:e.at+(Math.random()-.5)*1.5,fired:false}));game.spawnTotal=game.queue.length+game.waveEvents.reduce((sum,e)=>sum+e.count,0);game.spawnIndex=0;game.spawnTimer=.12;game.time=0;game.paused=false;game.bcpUsed=false;addLog(`WAVE ${game.wave}：${wave.title} が始まりました。`,'warn');toast(`${wave.title}：${wave.subtitle}`);refreshUI()}
+  function startWave(){if(placement)return;if(game.phase!=='ready'&&game.phase!=='intermission')return;if(game.wave>=WAVE_DEFS.length)return;game.wave++;const wave=WAVE_DEFS[game.wave-1];game.phase='active';game.queue=wave.units.slice();game.spawned=0;game.waveEvents=(EVENT_PLANS[game.wave]||[]).map(e=>({...e,at:e.at+(Math.random()-.5)*1.5,fired:false}));game.spawnTotal=game.queue.length+game.waveEvents.reduce((sum,e)=>sum+e.count,0);game.spawnIndex=0;game.spawnTimer=.12;game.time=0;game.paused=false;game.bcpUsed=false;addLog(`WAVE ${game.wave}：${wave.title} が始まりました。`,'warn');toast(`${wave.title}：${wave.subtitle}`);refreshUI()}
   function spawnEnemy(kind,route='main',startFraction=0){const e=ENEMIES[kind],w=WAVE_DEFS[game.wave-1],routeLen=route==='side'?SECONDARY.total:PRIMARY.total,health=Math.round(e.hp*w.hpMult);game.enemies.push({kind,route,distance:routeLen*startFraction,hp:health,maxHp:health,slowLeft:0,flash:0,uid:Math.random()});game.spawned++}
   function fireEvent(e){e.fired=true;
     if(e.kind==='route'){game.sideRouteOpen=true;for(let j=0;j<e.count;j++)spawnEnemy(j%3===0?'malware':'auth','side',j*.05);game.notice=`新たな侵入ルート発生！ 別ルートから ${e.count} 件`;addLog(`新規経路が出現：別ルートから${e.count}件が接近`,'danger');}
@@ -156,6 +251,30 @@
       if(selected&&!tower){disc(p.x,p.y,32,null,'#7afbe4',2)}
       text(String(i+1).padStart(2,'0'),p.x+22,p.y-25,'#7095a8',10,'center',750)
     }}
+  function drawPlacementPreview(){
+    if(!placement||placement.pad<0)return;
+    const type=hoverPreviewType||placement.type;
+    if(!type||!TOWERS[type])return;
+    const base=TOWERS[type],pad=PADS[placement.pad],radius=base.range;
+    ctx.save();
+    ctx.beginPath();ctx.arc(pad.x,pad.y,radius,0,Math.PI*2);
+    ctx.fillStyle=base.color+'22';ctx.fill();
+    ctx.save();ctx.clip();ctx.lineWidth=5;ctx.lineCap='round';ctx.strokeStyle=base.color+'d0';
+    for(const nodes of [PATH,...(game.sideRouteOpen?[SIDE_PATH]:[])]){
+      ctx.beginPath();ctx.moveTo(nodes[0].x,nodes[0].y);
+      for(let i=1;i<nodes.length;i++)ctx.lineTo(nodes[i].x,nodes[i].y);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.setLineDash([9,7]);ctx.lineWidth=3;ctx.strokeStyle=base.color;ctx.shadowColor=base.color;ctx.shadowBlur=18;
+    ctx.stroke();ctx.setLineDash([]);ctx.shadowBlur=0;
+    disc(pad.x,pad.y,28,'#123f49dd',base.color,2.6);
+    drawPadIcon(type,pad.x,pad.y,base.color);
+    const x=Math.max(90,Math.min(W-90,pad.x)),y=Math.max(58,Math.min(H-39,pad.y-radius-19));
+    roundRect(x-74,y-14,148,28,8,'#07202eea',base.color,1.2);
+    text(`仮配置 / 射程 ${radius}`,x,y+1,'#efffff',12,'center',850);
+    ctx.restore();
+  }
   function drawEnemies(){for(const enemy of game.enemies){const e=ENEMIES[enemy.kind],p=posAt(enemy.distance,enemy.route),r=e.radius;ctx.save();ctx.shadowColor=e.color;ctx.shadowBlur=enemy.kind==='boss'?23:12;disc(p.x,p.y,r,enemy.flash>0?'#fff7df':'#1d2134',e.color,enemy.kind==='boss'?3.5:2.2);ctx.restore();ctx.save();ctx.translate(p.x,p.y);
       if(enemy.kind==='phish'){ctx.strokeStyle=e.color;ctx.lineWidth=1.8;roundRect(-7,-5,14,10,2,null,e.color,1.7);ctx.beginPath();ctx.moveTo(-7,-5);ctx.lineTo(0,1);ctx.lineTo(7,-5);ctx.stroke()}
       else if(enemy.kind==='auth'){ctx.strokeStyle=e.color;ctx.lineWidth=2;disc(-3,-3,3,null,e.color,1.8);ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(7,7);ctx.moveTo(3,3);ctx.lineTo(6,0);ctx.stroke()}
@@ -169,30 +288,34 @@
     roundRect(16,14,242,34,9,'#071728c9','#285367aa');text('HOSPITAL CYBER DEFENSE',30,31,'#a8d6da',11,'left',820);
     if(game.phase==='intermission'||game.phase==='ready'){roundRect(347,19,270,34,8,'#0a2d30cf','#3c8173a3');text(game.phase==='ready'?'防御設備を配置して開始':'SPで強化して次のウェーブへ',482,36,'#7ce6cf',12,'center',770)}
     if(game.noticeLeft>0){roundRect(280,67,405,36,9,'#5b2b3ce5','#fa8394',1.5);text(game.notice,482,85,'#ffe1e8',14,'center',800)}
-    if(game.paused){ctx.fillStyle='#03111c9e';ctx.fillRect(0,0,W,H);roundRect(355,235,250,85,12,'#0f2a3adf','#65c9c8',2);text('Ⅱ  一時停止中',480,279,'#d9f9f6',24,'center',850)}
+    if(game.paused&&!placement){ctx.fillStyle='#03111c9e';ctx.fillRect(0,0,W,H);roundRect(355,235,250,85,12,'#0f2a3adf','#65c9c8',2);text('Ⅱ  一時停止中',480,279,'#d9f9f6',24,'center',850)}
+    else if(game.paused&&placement){roundRect(15,53,207,27,7,'#1a4850d9','#48d9c7',1);text('配置中は自動一時停止',26,67,'#b2faec',11,'left',800)}
   }
-  function render(){if(!ctx)return;ctx.clearRect(0,0,W,H);drawBackground();drawPath();drawSideRoute();drawPads();drawEnemies();drawEffects();drawHUD()}
+  function render(){if(!ctx)return;ctx.clearRect(0,0,W,H);drawBackground();drawPath();drawSideRoute();drawPads();drawEnemies();drawPlacementPreview();drawEffects();drawHUD()}
   function frame(ts){if(!lastTime)lastTime=ts;const dt=Math.min(.065,Math.max(0,(ts-lastTime)/1000));lastTime=ts;update(dt);render();if(game.phase==='active'&&!game.paused&&ts%180<17){ // cheap HUD updates between expensive DOM changes
       $('spValue').textContent=money(game.sp);$('scoreValue').textContent=money(game.score);$('waveCounter').textContent=`${game.spawned} / ${game.spawnTotal} 出現・残 ${game.enemies.length}`;$('waveProgress').style.width=(game.spawnTotal?100*game.spawned/game.spawnTotal:0)+'%';
     }
     raf=requestAnimationFrame(frame)}
   function handleBoard(e){if(game.phase==='won'||game.phase==='lost')return;const rect=canvas.getBoundingClientRect(),x=(e.clientX-rect.left)/rect.width*W,y=(e.clientY-rect.top)/rect.height*H;let near=-1,dist=36;for(let i=0;i<PADS.length;i++){const d=Math.hypot(PADS[i].x-x,PADS[i].y-y);if(d<dist){dist=d;near=i}}
-    if(near<0){game.selectedPad=-1;renderDetail();renderQuickTower();syncPadButtons();return}pressPad(near)}
+    if(near<0){if(!placement){game.selectedPad=-1;renderDetail();renderQuickTower();syncPadButtons()}return}pressPad(near)}
   function moveHover(e){const rect=canvas.getBoundingClientRect(),x=(e.clientX-rect.left)/rect.width*W,y=(e.clientY-rect.top)/rect.height*H;let near=-1,dist=30;for(let i=0;i<PADS.length;i++){const d=Math.hypot(PADS[i].x-x,PADS[i].y-y);if(d<dist){dist=d;near=i}}hoverPad=near;canvas.style.cursor=near>=0?'pointer':'crosshair'}
   let lastFocus=null;
   function closeModal(){const backdrop=$('modalBackdrop');backdrop.classList.remove('open');backdrop.dataset.restorePause='0';if(lastFocus&&lastFocus.isConnected)lastFocus.focus()}
   function openModal(title,bodyHTML,buttons,closable=true){$('modalBackdrop').dataset.restorePause='0';lastFocus=document.activeElement;$('modalTitle').textContent=title;$('modalBody').innerHTML=bodyHTML;$('modalButtons').innerHTML='';$('modalClose').style.visibility=closable?'visible':'hidden';for(const b of buttons){const btn=document.createElement('button');btn.className='btn '+(b.primary?'btn-primary':'');btn.textContent=b.label;btn.addEventListener('click',()=>{closeModal();b.action?.()});$('modalButtons').append(btn)}$('modalBackdrop').classList.add('open');$('modalButtons').querySelector('button')?.focus()}
-  function showHelp(){closeDrawer({restoreFocus:false});const wasActive=game.phase==='active'&&!game.paused;if(wasActive)game.paused=true;refreshUI();openModal('遊び方・作戦ガイド',`<p>あなたは架空の病院の防衛担当者。<strong>診療継続度と情報保護度を保ちながら、5ウェーブを突破</strong>してください。</p><ul><li>上の <strong>ショップ</strong> ボタンで設備を選び、パネルが閉じたらマップ上の <strong>＋</strong> に配置</li><li><strong>▶ ウェーブ開始</strong>で敵が出現。設備は自動で迎撃</li><li>撃退でSPを獲得。<strong>どの防御設備も</strong>配置地点を再度タップしてLv.3まで強化できます</li><li>配置済みの設備をタップすると <strong>強化スライドパネル</strong> が開きます（最大Lv.3）</li><li><strong>ショップ／強化／職員教育／ログ</strong> は上部ボタンから開閉でき、Escでも閉じられます</li><li>メール対策はフィッシング、MFAは認証系、EDRはマルウェアに強い</li><li>ネットワーク分離は敵の進行を一時的に遅くします</li><li>第2ウェーブ以降、手順逸脱を想定した人的リスクが<strong>マップ途中に突然出現</strong>します</li><li>第3ウェーブ以降は<strong>別の侵入ルート</strong>が突然発生。上側の防衛も必要です</li><li><strong>職員教育（全体強化）</strong>で人的リスク型の侵攻が遅くなります</li><li>BCPは診療継続度のみ一部回復（ウェーブごとに1回まで）</li><li>設備は65%返金で売却可能。途中で一時停止・倍速もできます</li></ul><p style="font-size:11px">※ このゲームは教育向けに対策効果を抽象化しています。実際のサイバー攻撃手順や病院の設備構成は再現していません。</p>`,[{label:'ゲームに戻る',primary:true,action:()=>{if(wasActive){game.paused=false;refreshUI()}}}],true);
+  function showHelp(){if(placement)cancelPlacement({quiet:true});closeDrawer({restoreFocus:false});const wasActive=game.phase==='active'&&!game.paused;if(wasActive)game.paused=true;refreshUI();openModal('遊び方・作戦ガイド',`<p>あなたは架空の病院の防衛担当者。<strong>診療継続度と情報保護度を保ちながら、5ウェーブを突破</strong>してください。</p><ul><li>マップ上の <strong>空き地点＋</strong> を押すとその地点のショップが開きます。設備を選び、<strong>カバー範囲の円を確認してから「設置確定」</strong>してください</li><li>ショップボタンから先に設備を選ぶ方法も利用できます。仮配置の段階ではSPは消費されません</li><li><strong>▶ ウェーブ開始</strong>で敵が出現。設備は自動で迎撃</li><li>撃退でSPを獲得。<strong>どの防御設備も</strong>配置地点を再度タップしてLv.3まで強化できます</li><li>配置済みの設備をタップすると <strong>強化スライドパネル</strong> が開きます（最大Lv.3）</li><li><strong>ショップ／強化／職員教育／ログ</strong> は上部ボタンから開閉でき、Escでも閉じられます</li><li>メール対策はフィッシング、MFAは認証系、EDRはマルウェアに強い</li><li>ネットワーク分離は敵の進行を一時的に遅くします</li><li>第2ウェーブ以降、手順逸脱を想定した人的リスクが<strong>マップ途中に突然出現</strong>します</li><li>第3ウェーブ以降は<strong>別の侵入ルート</strong>が突然発生。上側の防衛も必要です</li><li><strong>職員教育（全体強化）</strong>で人的リスク型の侵攻が遅くなります</li><li>BCPは診療継続度のみ一部回復（ウェーブごとに1回まで）</li><li>設備は65%返金で売却可能。途中で一時停止・倍速もできます</li></ul><p style="font-size:11px">※ このゲームは教育向けに対策効果を抽象化しています。実際のサイバー攻撃手順や病院の設備構成は再現していません。</p>`,[{label:'ゲームに戻る',primary:true,action:()=>{if(wasActive){game.paused=false;refreshUI()}}}],true);
     // Restore pause state when closing by backdrop or ×, too.
     $('modalBackdrop').dataset.restorePause=wasActive?'1':'0';}
   function showResult(win){const grade=win?(game.integrity>=85&&game.privacy>=85?'S':game.integrity>=60&&game.privacy>=60?'A':'B'):'—';$('modalIcon').textContent=win?'★':'!';$('modalIcon').style.color=win?'var(--teal)':'var(--red)';const body=`<p>${win?'全5ウェーブを防衛しました。設備の組み合わせと投資判断が成果につながりました。':'診療継続度または情報保護度が0になりました。防衛設備の配置や強化順を見直しましょう。'}</p><div class="result-grid"><div><small>総合評価</small><strong>${grade}</strong></div><div><small>防衛スコア</small><strong>${money(game.score)}</strong></div><div><small>撃退数</small><strong>${game.kills}</strong></div><div><small>診療継続</small><strong>${Math.round(game.integrity)}%</strong></div><div><small>情報保護</small><strong>${Math.round(game.privacy)}%</strong></div><div><small>侵入数</small><strong>${game.leaks}</strong></div></div><p style="font-size:11px">ふりかえり：どの脅威に対して防御が不足したか、限られたSPをどう配分すべきだったか考えてみましょう。</p>`;
     openModal(win?'防衛成功！ ミッション完了':'防衛失敗 — 再挑戦しよう',body,[{label:'もう一度プレイ',primary:true,action:resetGame},{label:'結果を確認',action:()=>{}}],true)}
-  function doRestart(){closeDrawer({restoreFocus:false});if(game.phase==='ready'&&game.towers.every(t=>!t)){resetGame();return}const resume=game.phase==='active'&&!game.paused;if(resume){game.paused=true;refreshUI()}openModal('ゲームを最初からやり直しますか？','<p>配置した設備、ポイント、スコア、進行状況はすべて初期化されます。</p>',[{label:'初期化する',primary:true,action:resetGame},{label:'キャンセル',action:()=>{if(resume){game.paused=false;refreshUI()}}}]);$('modalBackdrop').dataset.restorePause=resume?'1':'0'}
+  function doRestart(){if(placement)cancelPlacement({quiet:true});closeDrawer({restoreFocus:false});if(game.phase==='ready'&&game.towers.every(t=>!t)){resetGame();return}const resume=game.phase==='active'&&!game.paused;if(resume){game.paused=true;refreshUI()}openModal('ゲームを最初からやり直しますか？','<p>配置した設備、ポイント、スコア、進行状況はすべて初期化されます。</p>',[{label:'初期化する',primary:true,action:resetGame},{label:'キャンセル',action:()=>{if(resume){game.paused=false;refreshUI()}}}]);$('modalBackdrop').dataset.restorePause=resume?'1':'0'}
   document.querySelectorAll('[data-panel]').forEach(btn=>btn.addEventListener('click',()=>openDrawer(btn.dataset.panel)));
-  $('closeDrawerBtn').addEventListener('click',()=>closeDrawer());
-  $('drawerBackdrop').addEventListener('click',()=>closeDrawer());
+  $('closeDrawerBtn').addEventListener('click',()=>{if(placement&&!placement.type)cancelPlacement({quiet:true});closeDrawer()});
+  $('drawerBackdrop').addEventListener('click',()=>{if(placement&&!placement.type)cancelPlacement({quiet:true});closeDrawer()});
   $('closeToMapBtn').addEventListener('click',()=>{closeDrawer({restoreFocus:false});canvas.focus({preventScroll:true})});
   $('controlDrawer').addEventListener('keydown',trapDrawerFocus);
+  $('confirmPlacementBtn').addEventListener('click',confirmPlacement);
+  $('changePlacementBtn').addEventListener('click',()=>{if(placement)openDrawer('shop')});
+  $('cancelPlacementBtn').addEventListener('click',()=>cancelPlacement());
   $('trainingBtn').addEventListener('click',upgradeTraining);
   $('startBtn').addEventListener('click',startWave);
   $('pauseBtn').addEventListener('click',()=>{if(game.phase!=='active')return;game.paused=!game.paused;refreshUI()});
@@ -203,8 +326,8 @@
   $('modalClose').addEventListener('click',()=>{const restore=$('modalBackdrop').dataset.restorePause==='1';$('modalBackdrop').dataset.restorePause='0';closeModal();if(restore&&game.phase==='active'){game.paused=false;refreshUI()}});
   $('modalBackdrop').addEventListener('click',e=>{if(e.target===$('modalBackdrop'))$('modalClose').click()});
   canvas.addEventListener('pointerdown',handleBoard);canvas.addEventListener('pointermove',moveHover);canvas.addEventListener('pointerleave',()=>{hoverPad=-1});
-  window.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('modalBackdrop').classList.contains('open')){$('modalClose').click();return}if(e.key==='Escape'&&currentDrawer){closeDrawer();return}if(currentDrawer||$('modalBackdrop').classList.contains('open')||/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||''))return;
-    if('1234'.includes(e.key)&&e.key.length===1){const t=Object.keys(TOWERS)[Number(e.key)-1];if(t){game.selectedType=t;game.selectedPad=-1;renderShop();renderDetail();renderQuickTower();syncPadButtons();toast(TOWERS[t].name+'を選択')}}
+  window.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('modalBackdrop').classList.contains('open')){$('modalClose').click();return}if(e.key==='Escape'&&currentDrawer){if(placement&&!placement.type)cancelPlacement({quiet:true});closeDrawer();return}if(e.key==='Escape'&&placement){cancelPlacement();return}if(currentDrawer||$('modalBackdrop').classList.contains('open')||/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||''))return;
+    if('1234'.includes(e.key)&&e.key.length===1){const t=Object.keys(TOWERS)[Number(e.key)-1];if(t)choosePlacementType(t)}
     if(e.code==='Space'){e.preventDefault();if(game.phase==='active'){$('pauseBtn').click()}}
     if(e.key==='Enter'&&document.activeElement===canvas){e.preventDefault();startWave()}
   });
