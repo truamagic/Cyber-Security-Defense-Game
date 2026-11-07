@@ -1,0 +1,43 @@
+
+name: "ゲームの感想・評価"
+description: "面白さや難易度について意見を送ります"
+title: "[Feedback] "
+labels: ["feedback"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        プレイの感想をお聞かせください。
+        投稿内容は公開されます。
+
+  - type: dropdown
+    id: rating
+    attributes:
+      label: "総合評価"
+      options:
+        - "5：とても良い"
+        - "4：良い"
+        - "3：普通"
+        - "2：改善が必要"
+        - "1：不満がある"
+        - "評価しない"
+
+  - type: dropdown
+    id: focus
+    attributes:
+      label: "特に評価したい項目"
+      options:
+        - "ゲーム全体"
+        - "難易度・バランス"
+        - "操作性"
+        - "デザイン"
+        - "教育的な内容"
+        - "その他"
+
+  - type: textarea
+    id: comment
+    attributes:
+      label: "感想・改善してほしい点"
+    validations:
+      required: true
