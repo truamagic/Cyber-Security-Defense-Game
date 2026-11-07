@@ -1,0 +1,28 @@
+/* v4.4 — step-by-step tutorial spotlight.
+   Dim the surroundings without blocking taps, keyboard navigation, or the exit controls. */
+#tutorialSpotlight[hidden]{display:none!important}
+.tutorial-spotlight{position:fixed;inset:0;width:100%;height:100%;z-index:60;pointer-events:none;overflow:hidden;isolation:isolate}
+.tutorial-spotlight-svg{display:block;position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.tutorial-spotlight-shade{fill:#04101b;fill-opacity:.65}
+.tutorial-spotlight-ring{position:absolute;z-index:1;pointer-events:none;border:2px solid #92ffe1;border-radius:12px;box-shadow:0 0 0 3px #75f6d53e,0 0 19px 4px #35e5bdba,inset 0 0 17px #2ad5ae35;animation:hdFocusPulse 1.55s ease-in-out infinite}
+.tutorial-spotlight-ring[hidden]{display:none!important}
+.tutorial-spotlight-ring-secondary{border-color:#9bc9ff;box-shadow:0 0 0 3px #8ac0ff2b,0 0 14px 2px #83adff91;animation-delay:.25s}
+.tutorial-spotlight-hint{position:absolute;z-index:2;pointer-events:none;width:max-content;min-width:110px;max-width:232px;padding:10px 12px;display:flex;flex-direction:column;gap:3px;border:1px solid #70e7d0;border-left:4px solid #7cf0d7;border-radius:10px;background:linear-gradient(135deg,#123d4df9,#102336fb);box-shadow:0 10px 35px #000a,0 0 12px #59e9d425;color:#ebfff9;line-height:1.4}
+.tutorial-spotlight-count{color:#83f1dd;letter-spacing:.1em;font-size:9px;font-weight:900}
+.tutorial-spotlight-title{font-size:12px;font-weight:900}
+.tutorial-spotlight-tip{font-size:10px;line-height:1.55;color:#c8e3e9;overflow-wrap:anywhere}
+@keyframes hdFocusPulse{0%,100%{box-shadow:0 0 0 3px #75f6d53e,0 0 15px 2px #35e5bd9e}50%{box-shadow:0 0 0 7px #75f6d528,0 0 28px 6px #35e5bdc9}}
+/* The existing instruction panel remains readable when no drawer is covering it.
+   While a drawer is open, the floating hint explains the highlighted item. */
+body.tutorial-active:not(.drawer-open) #gameShell #tutorialPanel{position:relative;z-index:61!important}
+@media (orientation:landscape) and (max-height:600px) and (pointer:coarse){
+  .tutorial-spotlight-hint{padding:6px 9px;min-width:96px;max-width:170px;border-radius:7px}
+  .tutorial-spotlight-title{font-size:10px}
+  .tutorial-spotlight-tip{font-size:9px;line-height:1.3}
+  .tutorial-spotlight-count{font-size:8px}
+}
+@media(max-width:480px){
+  .tutorial-spotlight-hint{padding:8px 10px;max-width:180px}
+  .tutorial-spotlight-title{font-size:11px}
+}
+@media(prefers-reduced-motion:reduce){.tutorial-spotlight-ring{animation:none!important}}

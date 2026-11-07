@@ -22,6 +22,8 @@
   }
   const Risk=window.HD_RISK;
   if(!Risk)throw Error('Risk simulation module not loaded');
+  const Spotlight=window.HD_SPOTLIGHT;
+  if(!Spotlight)throw Error('Tutorial spotlight module not loaded');
   const canvas=document.getElementById('board'),ctx=canvas.getContext('2d');
   // Fallback for older Chromium-based browsers that lack CanvasRenderingContext2D.roundRect.
   if(ctx&&typeof ctx.roundRect!=='function'){ctx.roundRect=function(x,y,w,h,r){const q=Math.min(Math.max(0,typeof r==='number'?r:8),Math.abs(w)/2,Math.abs(h)/2);this.moveTo(x+q,y);this.lineTo(x+w-q,y);this.quadraticCurveTo(x+w,y,x+w,y+q);this.lineTo(x+w,y+h-q);this.quadraticCurveTo(x+w,y+h,x+w-q,y+h);this.lineTo(x+q,y+h);this.quadraticCurveTo(x,y+h,x,y+h-q);this.lineTo(x,y+q);this.quadraticCurveTo(x,y,x+q,y);this.closePath();return this}}
@@ -39,7 +41,7 @@
     {id:'educationOpen',title:'職員教育のパネルを開く',description:'設備だけではなく、職員による気づきと報告も重要です。上部の「職員教育」ボタンを押しましょう。',tip:'上部メニューの「職員教育」を選択。',target:'#openEducationBtn'},
     {id:'education',title:'職員教育を強化',description:'職員教育は人的リスク型の進行を遅くする全体強化です。今回はLv.1に上げて効果を確認しましょう。',tip:'「職員教育を強化 110 SP」を押す。',target:'#trainingBtn'},
     {id:'waveReady',title:'短い練習ウェーブを開始',description:'配置・強化が終わりました。ウェーブを開始すると敵が自動で移動し、タワーが射程内の敵に対応します。',tip:'「▶ ウェーブ1開始」を押す。',target:'#startBtn'},
-    {id:'waveActive',title:'防御の動きを観察しよう',description:'敵が水色のルートを進みます。タワーの光、敵のHP、診療継続度と情報保護度を見てみましょう。完了すると結果が表示されます。',tip:'観察中です。必要なら一時停止や2倍速を使えます。',target:'.wave-track'},
+    {id:'waveActive',title:'防御の動きを観察しよう',description:'敵が水色のルートを進みます。タワーの光、敵のHP、診療継続度と情報保護度を見てみましょう。完了すると結果が表示されます。',tip:'観察中です。必要なら一時停止や2倍速を使えます。',target:'.map-wrap'},
     {id:'complete',title:'チュートリアル完了！',description:'設置地点の選択・射程プレビュー・購入・設備強化・職員教育・ウェーブ開始を体験しました。メニューに戻り、3・5・7ウェーブから挑戦できます。',tip:'「メニューへ戻る」ボタンで開始設定に戻ります。',target:'#tutorialExitBtn'}
   ];
   const TUTORIAL_PAD=3;
@@ -64,7 +66,7 @@
     el.hidden=!active;
     document.body.classList.toggle('tutorial-active',active);
     document.querySelectorAll('.tutorial-highlight').forEach(node=>node.classList.remove('tutorial-highlight'));
-    if(!active){$('tutorialBtn').textContent='🎓 チュートリアル';$('tutorialBtn').disabled=false;return}
+    if(!active){Spotlight.hide();$('tutorialBtn').textContent='🎓 チュートリアル';$('tutorialBtn').disabled=false;return}
     const idx=TUTORIAL_STEPS.findIndex(s=>s.id===tutorial.step),step=TUTORIAL_STEPS[Math.max(0,idx)];
     const count=Math.min(idx+1,9);
     $('tutorialCounter').textContent=idx===9?'COMPLETE':`STEP ${count} / 9`;
@@ -76,7 +78,18 @@
     $('tutorialExitBtn').textContent=idx===9?'✓ メニューへ戻る':'✕ 終了';
     $('tutorialBtn').textContent='🎓 練習中';$('tutorialBtn').disabled=true;
     const target=document.querySelector(step.target);
-    if(target && !target.closest('[hidden]'))target.classList.add('tutorial-highlight');
+    if(target && !target.closest('[hidden]')){
+      target.classList.add('tutorial-highlight');
+      Spotlight.show({
+        target,
+        // Placement preview has two things to see: the range on the map AND
+        // the button to confirm purchase. Keep both illuminated.
+        secondary:step.id==='preview'?document.querySelector('.map-wrap'):null,
+        count:idx===9?'COMPLETE':`STEP ${count}/9`,
+        title:step.title,
+        tip:step.tip
+      });
+    }else Spotlight.hide();
   }
   function startTutorial(){
     const originalDifficulty=tutorial?.originalDifficulty||$('difficultySelect').value;
@@ -85,7 +98,8 @@
     $('difficultySelect').value='easy';game.risk=Risk.fresh('easy');game.waveLimit=1;refreshUI();
     addLog('初心者向けの操作練習を開始しました。練習中のSPやスコアは通常プレイへ引き継ぎません。');
     tutorialRender();
-    $('tutorialPanel').scrollIntoView({block:'nearest',behavior:'smooth'});
+    // The spotlight reveals the current target; do not scroll the target out
+    // of view by forcing the instruction panel into view afterwards.
   }
   function exitTutorial(){tutorial=null;returnToMenuNow();}
   function requestTutorialStart(){
@@ -648,8 +662,8 @@
     if(near<0){if(!placement){game.selectedPad=-1;renderDetail();renderQuickTower();syncPadButtons()}return}pressPad(near)}
   function moveHover(e){const rect=canvas.getBoundingClientRect(),x=(e.clientX-rect.left)/rect.width*W,y=(e.clientY-rect.top)/rect.height*H;let near=-1,dist=30;for(let i=0;i<PADS.length;i++){const d=Math.hypot(PADS[i].x-x,PADS[i].y-y);if(d<dist){dist=d;near=i}}hoverPad=near;canvas.style.cursor=near>=0?'pointer':'crosshair'}
   let lastFocus=null;
-  function closeModal(){const backdrop=$('modalBackdrop');backdrop.classList.remove('open');backdrop.dataset.restorePause='0';if(lastFocus&&lastFocus.isConnected)lastFocus.focus()}
-  function openModal(title,bodyHTML,buttons,closable=true){$('modalBackdrop').dataset.restorePause='0';lastFocus=document.activeElement;$('modalTitle').textContent=title;$('modalBody').innerHTML=bodyHTML;$('modalButtons').innerHTML='';$('modalClose').style.visibility=closable?'visible':'hidden';for(const b of buttons){const btn=document.createElement('button');btn.className='btn '+(b.primary?'btn-primary':'');btn.textContent=b.label;btn.addEventListener('click',()=>{closeModal();b.action?.()});$('modalButtons').append(btn)}$('modalBackdrop').classList.add('open');$('modalButtons').querySelector('button')?.focus()}
+  function closeModal(){const backdrop=$('modalBackdrop');backdrop.classList.remove('open');backdrop.dataset.restorePause='0';if(lastFocus&&lastFocus.isConnected)lastFocus.focus();if(tutorial?.active)tutorialRender();else Spotlight.hide()}
+  function openModal(title,bodyHTML,buttons,closable=true){Spotlight.suspend();$('modalBackdrop').dataset.restorePause='0';lastFocus=document.activeElement;$('modalTitle').textContent=title;$('modalBody').innerHTML=bodyHTML;$('modalButtons').innerHTML='';$('modalClose').style.visibility=closable?'visible':'hidden';for(const b of buttons){const btn=document.createElement('button');btn.className='btn '+(b.primary?'btn-primary':'');btn.textContent=b.label;btn.addEventListener('click',()=>{closeModal();b.action?.()});$('modalButtons').append(btn)}$('modalBackdrop').classList.add('open');$('modalButtons').querySelector('button')?.focus()}
   function showHelp(){if(placement)cancelPlacement({quiet:true});closeDrawer({restoreFocus:false});const wasActive=game.phase==='active'&&!game.paused;if(wasActive)game.paused=true;refreshUI();openModal('遊び方・作戦ガイド',`<p>あなたは架空の病院の防衛担当者。<strong>診療継続度と情報保護度を保ちながら、${game.waveLimit}ウェーブを突破</strong>してください。</p><ul><li>マップ上の <strong>空き地点＋</strong> を押すとその地点のショップが開きます。設備を選び、<strong>カバー範囲の円を確認してから「設置確定」</strong>してください</li><li>ショップボタンから先に設備を選ぶ方法も利用できます。仮配置の段階ではSPは消費されません</li><li><strong>▶ ウェーブ開始</strong>で敵が出現。設備は自動で迎撃</li><li>撃退でSPを獲得。<strong>どの防御設備も</strong>配置地点を再度タップしてLv.3まで強化できます</li><li>配置済みの設備をタップすると <strong>強化スライドパネル</strong> が開きます（最大Lv.3）</li><li><strong>ショップ／強化／職員教育／ログ</strong> は上部ボタンから開閉でき、Escでも閉じられます</li><li>メール対策はフィッシング、MFAは認証系、EDRはマルウェアに強い</li><li>ネットワーク分離は敵の進行を一時的に遅くします</li><li>第2ウェーブ以降、手順逸脱を想定した人的リスクが<strong>マップ途中に突然出現</strong>します</li><li>基本進行ルートは<strong>5つからプレイ開始時にランダム決定</strong>され、設置場所も経路に合わせて変化します。第3ウェーブで中央の侵入口、第5ウェーブで病院システムに近い侵入口が追加されます</li><li><strong>職員教育（全体強化）</strong>で人的リスク型の侵攻が遅くなります</li><li>BCPは診療継続度のみ一部回復（ウェーブごとに1回まで）</li><li>設備は65%返金で売却可能。途中で一時停止・倍速もできます</li><li><strong>運用管理</strong>：NORMAL/HARDでは設備の健全度がウェーブごとに低下し、保守・予防保守・サポート更新が必要です</li><li>強化は成功が保証されず、遅延した場合は次ウェーブの終了後に完了します（追加検証で即時完了も可能）</li><li>職員教育の効果は定着度に依存します。フォローアップ研修・報告体制の改善で効果を維持してください</li><li><strong>次ウェーブの事故リスク</strong>は運用管理で確認でき、予防措置で確率を下げられます</li></ul><p style="font-size:11px">※ このゲームは教育向けに対策効果を抽象化しています。実際のサイバー攻撃手順や病院の設備構成は再現していません。</p>`,[{label:'ゲームに戻る',primary:true,action:()=>{if(wasActive){game.paused=false;refreshUI()}}}],true);
     // Restore pause state when closing by backdrop or ×, too.
     $('modalBackdrop').dataset.restorePause=wasActive?'1':'0';}
