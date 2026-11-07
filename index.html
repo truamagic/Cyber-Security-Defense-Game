@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="./css/tutorial.css">
   <link rel="stylesheet" href="./css/risk.css">
   <link rel="stylesheet" href="./css/menu.css">
+  <link rel="stylesheet" href="./css/mobile-landscape.css">
 </head>
 <body>
 <section class="start-screen" id="titleMenu" aria-labelledby="startTitle">
@@ -23,6 +24,7 @@
         <p class="start-subtitle">守るのはシステムだけではない。診療を止めないことが使命。</p>
       </div>
     </div>
+    <p class="rotate-tip" id="rotateMenuTip">↻ スマホは横向きでのプレイを推奨します。端末の自動回転を有効にしてください。</p>
     <div class="start-setup" aria-label="ゲーム開始設定">
       <section class="start-setting" aria-labelledby="menuModeLabel">
         <div class="start-setting-heading"><h2 id="menuModeLabel">難易度を選択</h2><span>RISK LEVEL</span></div>
@@ -54,7 +56,7 @@
 <div class="shell" id="gameShell" hidden>
   <header class="header">
     <div class="brand-mark" aria-hidden="true"><img src="./assets/hospital-defense-icon.png" width="52" height="52" alt="" decoding="async"></div>
-    <div class="brand-copy"><div class="eyebrow">CYBERSECURITY TOWER DEFENSE</div><h1>HOSPITAL <span>DEFENSE</span> <span class="version">C / RISK 4.1</span></h1></div>
+    <div class="brand-copy"><div class="eyebrow">CYBERSECURITY TOWER DEFENSE</div><h1>HOSPITAL <span>DEFENSE</span> <span class="version">C / RISK 4.2</span></h1></div>
     <div class="header-right">
       <span class="header-note"><span class="live-dot"></span> OFFLINE MODE / 通信なし</span>
       <select id="difficultySelect" hidden aria-hidden="true"><option value="easy">EASY</option><option value="normal" selected>NORMAL</option><option value="hard">HARD</option></select>
@@ -65,6 +67,7 @@
       <button class="btn" id="backToMenuBtn" type="button">⌂ メニューへ</button>
     </div>
   </header>
+  <p class="rotate-tip rotate-game-tip">↻ 横向きにすると、マップと操作パネルが並ぶレイアウトになります。</p>
   <section class="stats" aria-label="ゲームの状況">
     <div class="stat"><div class="stat-label"><svg class="icon" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V21H3zM9 15h6m-3-3v6"/></svg>診療継続度</div><div class="stat-value"><span id="integrityValue">100</span><em>%</em></div><div class="stat-bar"><i id="integrityBar"></i></div></div>
     <div class="stat"><div class="stat-label"><svg class="icon" viewBox="0 0 24 24"><path d="m12 2 8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="m8.5 12 2.2 2.2 4.8-4.8"/></svg>情報保護度</div><div class="stat-value"><span id="privacyValue">100</span><em>%</em></div><div class="stat-bar"><i id="privacyBar"></i></div></div>
@@ -108,7 +111,13 @@
         </section></div>
       <details class="pad-picker"><summary>⌗ 番号から配置・選択する（補助操作）</summary><div class="mobile-pads"><span class="mobile-pads-label">地点<br>番号</span><div class="mobile-pads-row" id="mobilePads" aria-label="配置番号を選択"></div></div></details>
       <div class="wave-track"><span id="waveLabel">次：不審メールの増加</span><div class="track"><i id="waveProgress"></i></div><span id="waveCounter">0 / 0</span></div>
-      <div class="board-bottom"><button class="btn btn-primary" id="startBtn" type="button">▶ ウェーブ開始</button><button class="btn" id="pauseBtn" type="button" disabled>Ⅱ 一時停止</button><button class="btn" id="speedBtn" type="button">×1 通常速度</button><button class="btn" id="bcpBtn" type="button" title="診療継続策として一部の代替運用を実施します">▣ BCP発動（130 SP）</button><span class="hint">設置地点 → ショップ → 射程プレビュー → 設置確定<br>1〜4で設備選択 / Spaceで一時停止</span></div>
+      <div class="board-bottom"><button class="btn btn-primary" id="startBtn" type="button">▶ ウェーブ開始</button><button class="btn" id="pauseBtn" type="button" disabled>Ⅱ 一時停止</button><button class="btn" id="speedBtn" type="button">×1 通常速度</button><button class="btn" id="bcpBtn" type="button" title="診療継続策として一部の代替運用を実施します">▣ BCP発動（130 SP）</button><span class="hint">設置地点 → ショップ → 射程プレビュー → 設置確定<br>1〜4で設備選択 / Spaceで一時停止</span>
+        <div class="landscape-risk" aria-label="運用状態の簡易表示">
+          <div><span>運用リスク</span><strong id="sideRiskChance">20%</strong></div>
+          <div><span>設備健全度</span><strong id="sideRiskHealth">—</strong></div>
+          <div><span>教育定着度</span><strong id="sideRiskAdherence">72%</strong></div>
+          <div><span>要対応</span><strong id="sideRiskProblems">0件</strong></div>
+        </div></div>
     </section>
 
   </main>

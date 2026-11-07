@@ -398,7 +398,12 @@
     $('waveLabel').textContent=active?`進行中：${current.title}`:game.phase==='intermission'&&upcoming?`次：${upcoming.title}`:game.phase==='won'?'全ウェーブ防衛完了':game.phase==='lost'?'病院の防衛機能が停止':upcoming?`次：${upcoming.title}`:'最終結果';
     $('waveCounter').textContent=active?`${game.spawned} / ${game.spawnTotal} 出現・残 ${game.enemies.length}`:game.phase==='intermission'?`${game.wave} / ${game.waveLimit} クリア`:game.phase==='won'?`${game.waveLimit} / ${game.waveLimit}`:game.phase==='lost'?`${game.wave} / ${game.waveLimit}`:`0 / ${game.waveLimit}`;
     $('waveProgress').style.width=(active&&game.spawnTotal?game.spawned/game.spawnTotal*100:game.phase==='won'?100:0)+'%';
-    renderShop();renderDetail();renderMobilePads();renderQuickTower();renderTraining();syncPadButtons();renderPlacementBar();renderRisk();tutorialRender();
+    renderShop();renderDetail();renderMobilePads();renderQuickTower();renderTraining();syncPadButtons();renderPlacementBar();renderRisk();
+    // Landscape control rail mirrors the existing HUD values without changing game logic.
+    for(const [from,to] of [['riskChance','sideRiskChance'],['riskHealth','sideRiskHealth'],['riskAdherence','sideRiskAdherence'],['riskProblems','sideRiskProblems']]){
+      $(to).textContent=$(from).textContent;
+    }
+    tutorialRender();
   }
   function upgradeTower(i){
     if(tutorial?.active&&!tutorialPermit('towerUpgrade',i))return;
@@ -619,6 +624,7 @@
     if(e.key==='Enter'&&document.activeElement===canvas){e.preventDefault();startWave()}
   });
   window.addEventListener('resize',fitCanvas);
+  window.addEventListener('orientationchange',()=>requestAnimationFrame(fitCanvas));
   // No network calls, third-party scripts, analytics, or personal data collection.
   initializePadButtons();resetGame();fitCanvas();raf=requestAnimationFrame(frame);
 })();
