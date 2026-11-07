@@ -38,3 +38,8 @@
 .session-indicator span+span{padding-left:8px;border-left:1px solid #478a87;color:#ffd9a1}
 @media(max-width:620px){.start-screen{align-items:flex-start;padding:14px 10px;min-height:100svh}.start-card{padding:19px 14px;border-radius:17px;gap:20px}.start-brand{gap:12px}.start-logo{width:57px;height:57px;border-radius:11px}.start-brand h1{font-size:clamp(22px,6.1vw,30px)}.start-eyebrow{font-size:8px;letter-spacing:.13em}.start-subtitle{font-size:10px;margin-top:7px}.start-setting{padding:12px}.start-options{gap:6px}.start-option{min-height:74px;padding:9px 4px}.start-option strong{font-size:13px}.start-option small{font-size:9px}.start-actions{grid-template-columns:1fr}.start-action{min-height:49px}}
 @media(prefers-reduced-motion:reduce){.start-option{transition:none}}
+.start-actions > .feedback-link {
+  grid-column: 1 / -1;
+  min-height: 42px;
+  text-decoration: none;
+}
