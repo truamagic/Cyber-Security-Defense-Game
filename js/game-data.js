@@ -49,6 +49,7 @@ const iconSVG={
     shop:{title:'防御設備ショップ',kicker:'SELECT → DEPLOY'},
     upgrade:{title:'設備の強化・管理',kicker:'LEVEL 1—3'},
     education:{title:'職員教育・人的リスク対策',kicker:'GLOBAL UPGRADE'},
+    risk:{title:'設備保守・リスク管理',kicker:'OPERATIONAL RISK'},
     log:{title:'防衛イベントログ',kicker:'EVENT HISTORY'}
   };
 
