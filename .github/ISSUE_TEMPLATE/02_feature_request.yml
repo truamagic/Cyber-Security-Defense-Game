@@ -1,0 +1,37 @@
+
+name: "改善・追加要望"
+description: "ゲームの改善案や新機能を提案します"
+title: "[Request] "
+labels: ["enhancement"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ゲームをより良くするための
+        アイデアを募集しています。
+        投稿内容は公開されます。
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: "改善したい分野"
+      options:
+        - "ゲームバランス"
+        - "操作性・画面"
+        - "チュートリアル"
+        - "敵・設備・システム"
+        - "新しいゲームモード"
+        - "その他"
+
+  - type: textarea
+    id: request
+    attributes:
+      label: "改善・追加してほしいこと"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reason
+    attributes:
+      label: "その理由・期待する効果"
