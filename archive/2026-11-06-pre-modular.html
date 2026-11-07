@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#08121f">
+  <meta name="description" content="架空の病院を守る、オフライン動作のサイバーセキュリティ・タワーディフェンスゲーム。">
+  <title>HOSPITAL DEFENSE | サイバー防衛タワーディフェンス</title>
+  <style>
+    :root{color-scheme:dark;--bg:#07121f;--panel:#0d1d2b;--panel2:#112535;--panel3:#182d40;--line:#294054;--line2:#1d3548;--text:#e8f4fa;--muted:#99acbc;--teal:#48dfc1;--teal2:#1da98e;--amber:#f5c977;--red:#ff778f;--blue:#78b6ff;--purple:#c69cf6;--radius:17px}
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;min-height:100vh;min-height:100svh;font-family:Inter,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,system-ui,sans-serif;background:radial-gradient(ellipse 1000px 600px at 80% -160px,#163d4b88,transparent 78%),radial-gradient(ellipse 800px 620px at -20% 60%,#14294477,transparent 80%),var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+    button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+    button:focus-visible,.slot-btn:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
+    button:disabled{cursor:not-allowed;opacity:.45;filter:saturate(.6)}
+    .shell{max-width:1530px;padding:22px 24px 34px;margin:0 auto}
+    .header{display:flex;align-items:center;gap:17px;margin-bottom:21px;flex-wrap:wrap}
+    .brand-mark{width:52px;height:52px;border:1px solid #337e79;border-radius:16px;display:grid;place-items:center;background:linear-gradient(135deg,#1d675f,#10303d);box-shadow:0 0 40px #2dd4bf16;flex:0 0 auto}
+    .brand-mark svg{width:30px;height:30px}
+    .brand-copy{flex:1;min-width:240px}
+    .eyebrow{color:var(--teal);font-size:10px;font-weight:800;letter-spacing:.18em}
+    h1{font-size:clamp(23px,2.1vw,31px);font-weight:850;letter-spacing:.035em;line-height:1.1;margin:3px 0 0}
+    h1 span{color:var(--teal)}
+    .version{display:inline-block;vertical-align:middle;font-size:9px;font-weight:800;color:var(--muted);padding:4px 7px;letter-spacing:.08em;margin-left:6px;border:1px solid var(--line);border-radius:6px}
+    .header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .header-note{font-size:11px;color:var(--muted);margin-right:8px;display:flex;align-items:center;gap:7px}
+    .live-dot{background:var(--teal);width:7px;height:7px;border-radius:50%;box-shadow:0 0 9px var(--teal)}
+    .btn{border:1px solid var(--line);background:#172d3c;color:var(--text);padding:10px 14px;border-radius:11px;font-size:12px;font-weight:750;display:inline-flex;gap:8px;align-items:center;justify-content:center;transition:background .15s,border-color .15s,transform .15s;white-space:nowrap}
+    .btn:hover:not(:disabled){background:#244254;border-color:#4d7582}
+    .btn:active:not(:disabled){transform:translateY(1px)}
+    .btn-primary{background:linear-gradient(115deg,#54e8c9,#25bb9f);color:#062526;border-color:#68efd2;box-shadow:0 8px 18px #2cd2ae22}
+    .btn-primary:hover:not(:disabled){background:linear-gradient(115deg,#7bf3da,#40d5b6);border-color:#94ffe7}
+    .btn-danger{border-color:#8b4656;color:#ffb5c2;background:#3b2634}
+    .icon{width:17px;height:17px;display:inline-block;flex:0 0 auto;stroke:currentColor;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}
+    .stats{display:grid;grid-template-columns:1.3fr 1.3fr 1fr 1fr 1fr;gap:11px;margin-bottom:16px}
+    .stat{background:linear-gradient(148deg,#132738ef,#0c1e2ded);border:1px solid var(--line2);border-radius:13px;padding:14px 17px;min-height:92px;position:relative;overflow:hidden}
+    .stat::after{content:"";position:absolute;width:75px;height:75px;top:-40px;right:-35px;border-radius:50%;background:#2fd7bd0d;pointer-events:none}
+    .stat-label{display:flex;align-items:center;gap:7px;color:#aec0ce;font-size:11px;font-weight:750;letter-spacing:.02em;margin-bottom:6px}
+    .stat-label .icon{width:14px;height:14px;color:#7aa6ac}
+    .stat-value{font-size:26px;letter-spacing:-.03em;font-weight:850;line-height:1.18;font-variant-numeric:tabular-nums}
+    .stat-value em{font-size:12px;color:var(--muted);font-style:normal;font-weight:650;margin-left:4px}
+    .stat-bar{height:4px;border-radius:20px;background:#2b4255;margin-top:10px;overflow:hidden}
+    .stat-bar>i{display:block;width:100%;height:100%;background:var(--teal);border-radius:20px;transition:width .25s ease,background .25s ease}
+    .stat:nth-child(3) .stat-value{color:var(--amber)}
+    .stat:nth-child(4) .stat-value{color:var(--blue)}
+    .layout{display:grid;grid-template-columns:minmax(0,1fr) 335px;gap:16px;align-items:start}
+    .card{border:1px solid var(--line2);border-radius:var(--radius);background:linear-gradient(148deg,#102232,#0b1b29);box-shadow:0 17px 44px #00000018;overflow:hidden}
+    .board-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:15px 18px;border-bottom:1px solid var(--line2)}
+    .board-title{font-size:13px;font-weight:850;letter-spacing:.045em;display:flex;align-items:center;gap:9px}
+    .board-title .icon{color:var(--teal)}
+    .mini-status{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:850;color:var(--teal);background:#1a4d493f;border:1px solid #2b777255;padding:5px 9px;border-radius:40px;letter-spacing:.08em}
+    .mini-status.is-active{color:var(--amber);background:#694d1b40;border-color:#a3834260}
+    .mini-status.is-failed{color:var(--red);background:#66314440;border-color:#aa4e6b60}
+     .map-wrap{position:relative;background:#0a1724;touch-action:manipulation}
+    .pad-hit-layer{position:absolute;inset:0;z-index:2;pointer-events:none}
+    .map-pad-btn{position:absolute;transform:translate(-50%,-50%);height:51px;width:51px;min-width:44px;min-height:44px;border:2px solid #79d9d821;background:#113d3d0c;color:transparent;border-radius:50%;pointer-events:auto;touch-action:manipulation;cursor:pointer}
+    .map-pad-btn:hover{border-color:#71e9cd;background:#47dfc120;box-shadow:0 0 0 4px #4ad8c115}
+    .map-pad-btn.occupied{border-color:#b7e4f01a}
+    .map-pad-btn.selected,.map-pad-btn:focus-visible{border-color:#e7fff4;box-shadow:0 0 0 5px #4adebf43;outline:0}
+    .map-pad-btn:active{background:#49d7bd42}
+    .quick-tower{border-top:1px solid var(--line2);background:#0c2533;display:flex;align-items:center;gap:11px;flex-wrap:wrap;padding:11px 15px;min-height:58px}
+    .quick-text{flex:1;min-width:190px;display:grid;gap:1px}
+    .quick-name{font-size:12px;font-weight:800;color:#dffaf2}
+    .quick-desc{font-size:10px;color:#a7c2ce;line-height:1.5}
+    .quick-upgrade-btn{min-height:38px}
+    .training-body{padding:0 15px 15px;display:grid;gap:9px}
+    .training-level{font-size:12px;font-weight:850;color:var(--teal)}
+    .training-desc{font-size:11px;color:#aac2cf;line-height:1.7}
+    .training-bars{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+    .training-bars>i{display:block;height:7px;border-radius:6px;background:#284659;border:1px solid #39586b}
+    .training-bars>i.done{background:#42ceb0;border-color:#60e5ca}
+    .training-body .btn{width:100%}
+    .upgrade-perk{margin:8px 0;padding:7px 9px;border-radius:8px;background:#183944;color:#bee7da;font-size:11px;line-height:1.6;border:1px solid #2f665d}
+    .shop-extra{display:block;color:#81daca;font-size:9px;font-weight:700;margin-top:3px}
+
+    canvas{display:block;width:100%;height:auto;aspect-ratio:960/560;cursor:crosshair;outline:none}
+    .canvas-badge{position:absolute;bottom:15px;left:16px;pointer-events:none;background:#081626c7;border:1px solid #3c5b6b86;border-radius:8px;padding:6px 10px;font-size:10px;color:#9cbac5;letter-spacing:.02em}
+    .map-status{position:absolute;top:15px;right:16px;pointer-events:none;border:1px solid #31695d8c;background:#10352cc8;border-radius:7px;padding:5px 10px;font-size:10px;color:#7aedd5;font-weight:800}
+    .board-bottom{border-top:1px solid var(--line2);padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .board-bottom .btn-primary{padding:12px 23px;min-width:168px}
+    .board-bottom .btn{min-height:43px}
+    .board-bottom .hint{margin-left:auto;color:var(--muted);font-size:11px;max-width:310px;text-align:right}
+    .mobile-pads{display:none}.mobile-pads-label{font-size:10px;color:var(--muted);font-weight:800;white-space:nowrap}.mobile-pads-row{display:flex;gap:7px;overflow-x:auto;scrollbar-width:thin;padding:4px 0}.slot-btn{flex:0 0 68px;display:grid;gap:2px;text-align:center;padding:7px 3px;border:1px solid #36596b;border-radius:9px;background:#173042;color:#d5e8ef;font-size:11px;line-height:1.3}.slot-btn small{font-size:9px;color:#99b4c2}.slot-btn.occupied{border-color:#4c9e91;background:#153b3e}.slot-btn.selected{outline:2px solid var(--teal);outline-offset:-1px}.wave-track{display:flex;align-items:center;gap:10px;background:#0d2231;border-top:1px solid var(--line2);padding:11px 17px;font-size:11px;color:var(--muted)}
+    .wave-track .track{flex:1;height:5px;background:#243b4d;border-radius:20px;overflow:hidden}
+    .wave-track .track i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),#85e8cd);border-radius:20px;transition:width .2s}
+    .wave-track span{font-variant-numeric:tabular-nums}
+    .sidebar{display:flex;flex-direction:column;gap:14px}
+    .panel-head{padding:16px 16px 11px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .panel-title{font-size:13px;font-weight:850;display:flex;gap:8px;align-items:center}
+    .panel-title .icon{width:16px;height:16px;color:var(--teal)}
+    .panel-kicker{font-size:10px;color:var(--muted);letter-spacing:.07em}
+    .shop{display:grid;gap:7px;padding:0 12px 14px}
+    .shop-item{display:flex;gap:10px;text-align:left;align-items:center;padding:11px 10px;width:100%;border-radius:11px;background:#122535;border:1px solid #284153;color:var(--text);position:relative;transition:background .15s,border-color .15s}
+    .shop-item:hover{background:#1b3648;border-color:#4c7f86}
+    .shop-item.active{background:#153b3d;border-color:#49d7bc;box-shadow:inset 0 0 0 1px #49d7bc33}
+    .shop-icon{height:39px;width:39px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;background:#204453;color:#6bdaca}
+    .shop-item[data-id="mfa"] .shop-icon{background:#453a24;color:#f7d18b}
+    .shop-item[data-id="edr"] .shop-icon{background:#2d3559;color:#a9baff}
+    .shop-item[data-id="segment"] .shop-icon{background:#3d2e52;color:#d3a4f7}
+    .shop-icon .icon{width:20px;height:20px}
+    .shop-main{min-width:0;flex:1}.shop-name,.shop-desc{display:block}.price{flex-shrink:0;align-self:center}
+    .shop-name{font-weight:780;font-size:12px;line-height:1.4}
+    .shop-desc{font-size:10px;color:var(--muted);line-height:1.55;margin-top:3px}
+    .price{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:850;color:var(--amber);white-space:nowrap}
+    .price span{font-size:9px;font-weight:650;color:#bca77f}
+    .shop-hotkey{position:absolute;right:6px;top:4px;color:#647e8b;font-size:9px}
+    .detail{padding:0 15px 15px;min-height:120px}
+    .empty-detail{color:var(--muted);font-size:12px;line-height:1.8;padding:14px;background:#132637;border:1px dashed #304d60;border-radius:10px}
+    .detail-title{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;font-weight:800;margin:2px 0 8px}
+    .detail-title em{font-style:normal;color:var(--teal);font-size:11px;border:1px solid #2d7566;background:#174339;border-radius:5px;padding:2px 7px}
+    .detail-metrics{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin:10px 0 12px}
+    .metric{background:#152c3c;border:1px solid #284356;border-radius:8px;padding:8px 4px;text-align:center}
+    .metric small{display:block;color:var(--muted);font-size:9px;margin-bottom:2px}
+    .metric b{font-size:12px;font-variant-numeric:tabular-nums}
+    .detail-actions{display:grid;grid-template-columns:1.2fr 1fr;gap:8px}
+    .detail-actions .btn{padding:9px 6px;white-space:normal;min-height:39px}
+    .detail-desc{color:var(--muted);font-size:11px;line-height:1.7}
+    .log{padding:0 15px 15px;display:grid;gap:7px}
+    .log-item{display:flex;align-items:baseline;gap:8px;padding:7px 0;border-bottom:1px solid #22394a;font-size:11px;line-height:1.55;color:#bdceda}
+    .log-item:last-child{border-bottom:0}
+    .log-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);flex:0 0 auto;transform:translateY(-1px)}
+    .log-item.warn .log-dot{background:var(--amber)}
+    .log-item.danger .log-dot{background:var(--red)}
+    .footer{margin-top:17px;color:#7f96a7;font-size:11px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+    .footer strong{color:#a9c4d1}
+    .modal-backdrop{position:fixed;z-index:20;inset:0;background:#03101be0;display:none;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(7px)}
+    .modal-backdrop.open{display:flex}
+    .modal{width:min(100%,510px);background:linear-gradient(145deg,#173247,#0d1c2c);border:1px solid #426378;border-radius:20px;padding:26px;box-shadow:0 35px 85px #0008}
+    .modal-top{display:flex;align-items:start;justify-content:space-between;gap:10px}
+    .modal-icon{width:52px;height:52px;background:#214b4b;border:1px solid #448777;border-radius:15px;display:grid;place-items:center;color:var(--teal);margin-bottom:14px}
+    .modal h2{margin:0;font-size:23px;line-height:1.25}
+    .modal p{color:#b7cad6;font-size:13px;line-height:1.9;margin:12px 0 18px}
+    .modal ul{padding-left:1.4em;color:#b7cad6;font-size:13px;line-height:2;margin:12px 0 21px}
+    .modal .result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:18px 0}
+    .modal .result-grid>div{background:#0b2030;border:1px solid #2b4959;padding:11px 4px;border-radius:9px;text-align:center}
+    .modal .result-grid small{display:block;font-size:10px;color:#a1b2c1}
+    .modal .result-grid strong{font-size:22px;font-variant-numeric:tabular-nums}
+    .modal-buttons{display:flex;gap:9px;flex-wrap:wrap}
+    .modal-buttons .btn{flex:1;min-width:110px}
+    .toast{position:fixed;left:50%;transform:translate(-50%,12px);bottom:28px;background:#13394b;border:1px solid #468596;color:#dbf8fd;padding:10px 18px;border-radius:11px;font-size:12px;font-weight:700;pointer-events:none;opacity:0;transition:opacity .2s,transform .2s;z-index:25;box-shadow:0 12px 32px #0007;text-align:center;max-width:calc(100vw - 40px)}
+    .toast.show{opacity:1;transform:translate(-50%,0)}
+    @media(max-width:1150px){.layout{grid-template-columns:minmax(0,1fr) 300px}.stat{padding:12px}.board-bottom .hint{display:none}}
+    @media(max-width:900px){.shell{padding:16px 14px 26px}.layout{grid-template-columns:1fr}.sidebar{display:grid;grid-template-columns:1fr 1fr;align-items:start}.sidebar>.card:last-child{grid-column:1/-1}.stats{grid-template-columns:repeat(5,minmax(0,1fr))}.stat-label{font-size:10px}.stat-value{font-size:21px}.shop{grid-template-columns:1fr 1fr}}
+    @media(max-width:600px){.mobile-pads{display:flex;gap:8px;align-items:center;border-top:1px solid var(--line2);padding:7px 10px}.mobile-pads-row{flex:1;min-width:0}.shell{padding:12px 9px 24px}.header{gap:10px;margin-bottom:14px}.brand-mark{width:43px;height:43px;border-radius:12px}.brand-mark svg{width:26px;height:26px}.brand-copy{min-width:190px}h1{font-size:22px}.header-note{display:none}.header-right{width:100%;justify-content:flex-end}.header-right .btn{padding:8px 11px}.stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-bottom:10px}.stat{min-height:66px;padding:10px}.stat:nth-child(1),.stat:nth-child(2){grid-column:span 1}.stat-label{font-size:9px;gap:3px}.stat-label .icon{display:none}.stat-value{font-size:19px}.stat-bar{margin-top:6px}.stat:nth-child(4) .stat-value,.stat:nth-child(5) .stat-value{font-size:19px}.layout{gap:10px}.board-head{padding:10px}.board-title{font-size:11px}.mini-status{font-size:9px}.canvas-badge{bottom:6px;left:7px;font-size:8px;padding:4px 5px}.map-status{top:7px;right:6px;font-size:9px;padding:3px 6px}.board-bottom{gap:7px;padding:10px}.board-bottom .btn{min-height:38px;padding:8px 9px;font-size:11px}.board-bottom .btn-primary{min-width:130px}.wave-track{padding:9px 10px}.sidebar{display:flex;gap:10px}.shop{grid-template-columns:1fr 1fr;gap:7px;padding:0 10px 12px}.shop-item{padding:8px;gap:6px;align-items:flex-start}.shop-icon{width:29px;height:29px;border-radius:8px}.shop-icon .icon{width:16px;height:16px}.shop-name{font-size:11px}.shop-desc{font-size:9px}.price{font-size:11px}.shop-hotkey{display:none}.panel-head{padding:12px 12px 9px}.detail{padding:0 11px 12px;min-height:unset}.log{padding:0 11px 12px}.footer{padding:0 3px}.modal{padding:20px}.modal h2{font-size:21px}}
+    @media(max-width:600px){.map-pad-btn{width:47px;height:47px}.quick-tower{padding:9px 10px;gap:7px}.quick-text{min-width:145px}.quick-upgrade-btn{flex:0 0 auto}.training-body{padding:0 12px 13px}}
+    @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+  
+/* ====== HOSPITAL DEFENSE 3.0 — tactical / neon interface ====== */
+:root{--bg:#03101d;--panel:#071b2b;--panel2:#0b273a;--panel3:#102d42;--line:#246077;--line2:#215068;--text:#eefaff;--muted:#91aebe;--teal:#50f9df;--teal2:#1bdac1;--amber:#ffd061;--red:#ff627c;--blue:#8bcbfb;--purple:#ba98f7;--radius:14px}
+html{scroll-behavior:smooth}
+body{background:radial-gradient(ellipse 90% 50% at 50% -20%,#1046637a,transparent 70%),linear-gradient(135deg,#061522,#010d1a 75%);letter-spacing:.008em;color:var(--text)}
+.shell{max-width:1700px;margin:auto;padding:12px 17px 24px}
+.topbar{display:grid;grid-template-columns:minmax(370px,1.07fr) minmax(0,2.6fr);align-items:stretch;gap:14px;margin-bottom:12px;border-bottom:1px solid #276678;padding-bottom:12px;box-shadow:0 8px 25px -28px #4befff}
+.header{display:flex;flex-wrap:nowrap;align-items:center;gap:13px;margin:0;min-width:0}
+.brand-mark{width:68px;height:68px;flex:0 0 68px;border-radius:16px;border:1px solid #48e4d5;background:radial-gradient(circle at 50% 20%,#0d5566,#071c2d 75%);box-shadow:0 0 20px #1ff5d450,inset 0 0 15px #27dbcb25}
+.brand-mark svg{height:48px;width:48px;filter:drop-shadow(0 0 5px #4cf9e6)}
+.brand-copy{min-width:0;flex:1}.eyebrow{font-size:10px;letter-spacing:.31em;color:#9ce2e8;font-weight:850;margin-top:5px}
+h1{font-size:clamp(18px,2vw,29px);font-weight:900;letter-spacing:.045em;line-height:1.17;margin:2px 0 0;text-shadow:0 0 15px #68c5ed3b;white-space:nowrap}
+h1 span{color:#a3fff2}
+.brand-subline{display:flex;align-items:center;gap:10px;margin-top:5px}.version{padding:1px 5px;font-size:9px;font-weight:850;color:#9dd9e5;background:#0e3648;border:1px solid #205a70;border-radius:4px;margin-left:0}
+.status-light{font-size:9px;color:#86bdc6;letter-spacing:.06em;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}.live-dot{width:6px;height:6px;box-shadow:0 0 8px var(--teal)}
+.header-right{display:flex;gap:6px;align-self:flex-start;flex-wrap:nowrap;margin-left:2px}.icon-btn{width:33px;height:33px;flex:0 0 33px;border-radius:8px;border:1px solid #35677d;background:linear-gradient(#1e455c,#0b2434);color:#cbe9f5;font-size:21px;font-weight:850;box-shadow:inset 0 1px #7cbfd125}
+.icon-btn:hover{background:#27576d;color:#fff;box-shadow:0 0 10px #3adad833}
+.stats{display:grid;grid-template-columns:1.12fr 1.12fr .90fr .83fr 1fr;gap:8px;margin:0;min-width:0}
+.stat{min-height:76px;padding:10px 11px 8px;background:linear-gradient(155deg,#112b3e,#041320 85%);border:1px solid #346d84;border-radius:11px;box-shadow:inset 0 1px #77c5d022,0 0 13px #076a8224;overflow:hidden;display:flex;flex-direction:column;justify-content:center}
+.stat::after{top:-55px;right:-45px;background:#31d3d115;width:92px;height:92px}
+.stat-label{font-size:clamp(9px,.84vw,12px);color:#d9e7f3;font-weight:850;gap:7px;margin:0 0 3px;white-space:nowrap;display:flex;align-items:center}
+.stat-symbol{font-size:21px;font-weight:1000;color:#38f4e2;line-height:1;filter:drop-shadow(0 0 4px #1ce9dd80)}.stat-symbol.trophy{color:#ffd466}
+.stat-value{font-size:clamp(18px,1.72vw,27px);color:#66fae7!important;text-align:center;white-space:nowrap;text-shadow:0 0 17px #13efcd30;font-variant-numeric:tabular-nums}
+.stat:nth-child(5) .stat-value{color:#f1f9ff!important;font-size:clamp(17px,1.55vw,26px)}
+.stat-value em{font-size:12px;color:#95d7d9;margin-left:4px}
+.stat-bar{height:6px;background:#123b48;border:1px solid #1d5361;box-shadow:inset 0 1px 4px #0008;margin-top:6px}.stat-bar>i{background:linear-gradient(90deg,#129d84,#6af9c6)!important;box-shadow:0 0 9px #55ffcc77}
+.arena-layout{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:12px;align-items:start}
+.card{background:linear-gradient(180deg,#092235f5,#051725f8);border:1px solid #2c7389;border-radius:12px;box-shadow:inset 0 1px #72d6f320,0 9px 30px #0004,0 0 18px #104d6044;overflow:hidden}
+.board-head{padding:10px 15px;min-height:43px;border-bottom:1px solid #247489;background:linear-gradient(90deg,#0b3440d9,#071e2d);gap:9px}
+.board-title{color:#cbe6f2;font-size:13px;letter-spacing:.035em}
+.tiny-symbol{color:#57f9dc;font-weight:950;font-size:21px;line-height:1}.tiny-sep{color:#36637b}.muted{color:#9dbbcd!important;font-weight:500!important}
+.mini-status{border-color:#2c9785;background:#14514844;color:#56f5dd}.mini-status.is-active{background:#48391955;color:var(--amber);border-color:#c59e46}.mini-status.is-failed{background:#65213655;color:#ffa6b6;border-color:#c45671}
+.map-wrap{position:relative;background:radial-gradient(ellipse at 50% 20%,#204456,#071827 75%);touch-action:manipulation;overflow:hidden}
+canvas{width:100%;height:auto;aspect-ratio:960/560;cursor:crosshair}
+.map-status{border-color:#48dac0;background:#0b3b41ed;color:#baffed;top:12px;right:13px;letter-spacing:.08em;font-weight:900;box-shadow:0 0 14px #34f5db33}
+.canvas-badge{border-color:#307f88;background:#061d2dda;color:#b3e0e9;bottom:13px;left:14px;padding:6px 10px}
+.map-pad-btn{width:47px;height:47px;border-radius:50%;border:1px solid #55f8df19;background:transparent;transition:box-shadow .15s,border-color .15s}
+.map-pad-btn:hover,.map-pad-btn:focus-visible{border-color:#74ffdf;box-shadow:0 0 15px #3ffff055,inset 0 0 10px #6effdf33}
+.map-pad-btn.selected{border-color:#effff9;box-shadow:0 0 20px #59f9e955}
+.map-bottom-legend{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:9px;padding:8px 15px;border-top:1px solid #216078;border-bottom:1px solid #155066;background:linear-gradient(90deg,#051b29,#0b2b3a);font-size:10px;color:#c8e2ea}
+.map-bottom-legend span{display:flex;gap:7px;align-items:center;white-space:nowrap}
+.legend-dot{display:inline-block;border:2px solid #8af9ff;border-radius:50%;height:14px;width:14px;box-shadow:0 0 7px #41ecec8c}.legend-dot.range{border-style:dashed;border-color:#4cf0e5;box-shadow:none}.legend-line{display:inline-block;height:3px;width:30px;border-radius:5px;box-shadow:0 0 8px #48eeef}.legend-line.main{background:#48f6ed}.legend-line.alt{background:#ffca6b;box-shadow:0 0 8px #ffcc6a}
+.wave-track{padding:9px 15px;border-top:none;background:#061c2a;gap:10px;font-size:11px}.wave-track .track{height:7px;background:#123c4e}.wave-track .track i{background:linear-gradient(90deg,#2bacd1,#53ffe0)}
+.sidebar{gap:11px}.panel-head{padding:11px 13px 10px;border-bottom:1px solid #22576e;background:linear-gradient(90deg,#093542,#0b2b3d);gap:6px}.panel-title{font-size:13px;letter-spacing:.015em;font-weight:850;gap:7px;white-space:nowrap}.panel-kicker{font-size:9px;letter-spacing:.08em;color:#7eabb7;white-space:nowrap}.mini-icon{color:#48efdb;font-size:19px;line-height:1}
+.shop{display:grid;grid-template-columns:1fr;gap:8px;padding:10px}.shop-item{border-radius:11px;background:linear-gradient(115deg,#16384b,#0b2132 80%);border:1px solid #37677b;padding:10px 10px;min-height:76px;align-items:center;box-shadow:inset 0 1px #a8daed20}
+.shop-item.active{border:1px solid #6bf6df;background:linear-gradient(110deg,#154d50,#0c2f40);box-shadow:0 0 12px #2affd33b,inset 0 0 0 1px #2dddc025}
+.shop-icon{width:49px;height:51px;border-radius:9px;background:#113e51;color:#9bf2ff;border:1px solid #326879}.shop-icon .icon{height:28px;width:28px;filter:drop-shadow(0 0 5px #3be8e888)}
+.shop-item[data-id="mfa"] .shop-icon{color:#ffe4a3;background:#46402c}.shop-item[data-id="edr"] .shop-icon{color:#b5d6ff;background:#253e5a}.shop-item[data-id="segment"] .shop-icon{color:#d2adff;background:#3b3453}
+.shop-main{min-width:0;flex:1}.shop-name{font-size:12px;color:#f2faff;line-height:1.45}.shop-desc{font-size:10px;color:#adcbd9;line-height:1.6;display:block}.shop-extra{font-size:9px;color:#78edda;margin-top:3px}
+.shop-hotkey{right:7px;top:5px;color:#749eb1}.price{font-size:15px;color:#ffdb7b;display:flex;align-items:center;gap:4px;align-self:center;flex-shrink:0}.price span{font-size:10px;color:#fff3c7}
+.shop-footer{padding:8px 12px 11px;border-top:1px solid #20465b;color:#93c6cd;font-size:10px;display:flex;justify-content:space-between;gap:9px}
+.training-card{border-color:#2d9b80;background:linear-gradient(180deg,#103e3b,#051f2b 40%,#061e2b)}.training-card .panel-head{background:linear-gradient(90deg,#125347,#0b2f38);border-color:#267969}.training-body{padding:12px 13px;gap:10px}.training-hero{display:flex;gap:12px;align-items:center}.training-glyph{display:grid;place-items:center;height:55px;width:55px;min-width:55px;font-size:38px;color:#8bffbc;text-shadow:0 0 10px #2df5a688;border-radius:10px;background:linear-gradient(135deg,#226b54,#123945);border:1px solid #2f906e}.training-content{min-width:0}.training-level{color:#8effd9;font-size:15px;font-weight:900}.training-desc{font-size:11px;color:#c2dcdb;line-height:1.55;margin-top:3px}.training-bars{margin-top:1px}.training-bars>i{height:7px;background:#15453e;border-color:#347f6c}.training-bars>i.done{background:#6afaaa;box-shadow:0 0 8px #55ffbb66}
+.btn-training{background:linear-gradient(100deg,#136348,#1fae6d);color:#edfff2;border:1px solid #6af8af;min-height:44px;font-weight:850;box-shadow:0 0 13px #1ceca63e}.btn-training:hover:not(:disabled){background:#27996e;color:#fff}
+.threat-key .panel-head{padding:9px 13px}.threat-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:12px}.threat-grid span{display:flex;gap:7px;align-items:center;font-size:11px;color:#cee1ed;white-space:nowrap}.threat-marker{font-size:14px;font-style:normal;display:grid;place-items:center;height:26px;width:26px;border-radius:7px;background:#301b44;color:#c98dff;box-shadow:inset 0 0 0 1px #8759b8}.threat-marker.t-auth{color:#f0c37c;background:#3d2c2f;box-shadow:inset 0 0 0 1px #9d6747}.threat-marker.t-malware{color:#ff7a82;background:#4b1e31;box-shadow:inset 0 0 0 1px #b94b71}.threat-marker.t-insider{color:#ffd678;background:#5a3d1e;box-shadow:inset 0 0 0 1px #bf8e43}
+.command-row{display:grid;grid-template-columns:1.07fr 1.55fr 1.1fr;gap:12px;margin-top:12px;align-items:stretch}.command-row .card{min-height:175px}.control-card .panel-head,.quick-card .panel-head,.log-card .panel-head{padding:9px 12px}.board-bottom{padding:13px;display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:7px;border-top:0;align-items:stretch}.board-bottom .btn{min-height:50px;font-size:12px;padding:8px 6px;white-space:normal}.board-bottom .launch{grid-row:span 2;font-size:16px;background:linear-gradient(145deg,#075939,#15a16f);color:#eaffee;box-shadow:0 0 14px #18f3a55c,inset 0 1px #a4ffcc;line-height:1.4}.board-bottom .bcp{grid-column:2/4;background:linear-gradient(110deg,#715121,#402b1c);border-color:#e8b750;color:#fff0cb;box-shadow:0 0 13px #d79e3233}.board-bottom .pause,.board-bottom .speed{background:linear-gradient(#214b67,#0d273a);border-color:#5085a1;color:#dbf4ff}.controls-note{padding:0 13px 10px;font-size:10px;color:#89b5c7}
+.quick-tower{border-top:0;background:transparent;min-height:70px;padding:14px;gap:10px;display:flex;align-items:center}.quick-name{font-size:14px;color:#e3fff7;line-height:1.5}.quick-desc{font-size:11px;color:#a8cbd7;line-height:1.55}.quick-upgrade-btn{min-width:145px;min-height:51px;font-size:12px;white-space:normal;color:#edfff7;background:linear-gradient(120deg,#087a6b,#29bba7);border:1px solid #83ffdf;box-shadow:0 0 15px #35ffcf66}.quick-upgrade-btn:hover:not(:disabled){background:#30b99c;color:#fff}
+.detail-drawer{border-top:1px solid #1f4b5d;background:#081f2d}.detail-drawer>summary{cursor:pointer;padding:9px 14px;color:#92b6c9;font-size:11px;list-style:none;display:flex;align-items:center;gap:8px}.detail-drawer>summary:before{content:'＋';font-weight:900;color:#59eed6}.detail-drawer[open]>summary:before{content:'−'}.detail{padding:6px 14px 14px;min-height:0}.detail-metrics{margin:9px 0}
+.log{padding:7px 13px 12px;gap:1px}.log-item{padding:7px 2px;font-size:11px;line-height:1.5;color:#d1e2e9}.log-item.warn{color:#ffe2a3}.log-item.danger{color:#ffadbb}
+.footer{margin-top:14px;border-top:1px solid #17405b;padding:12px 2px 0;font-size:10px;color:#7fa4b3}.footer strong{color:#c0dfeb}
+.modal-backdrop{background:#03101de8}.modal{border-color:#3a94a1;box-shadow:0 40px 90px #000a,0 0 50px #1bdac122}.toast{border-color:#65cbbf;box-shadow:0 0 20px #38ecc544}
+@media(min-width:1500px){.arena-layout{grid-template-columns:minmax(0,1fr) 370px}.stat{min-height:78px}.shop-item{min-height:82px}.board-head{min-height:44px}}
+@media(max-width:1260px){.topbar{grid-template-columns:1fr}.header{justify-content:flex-start}.header-right{margin-left:auto;align-self:center}.stats{grid-template-columns:1.1fr 1.1fr 1fr 1fr 1fr}.arena-layout{grid-template-columns:minmax(0,1fr) 315px}.command-row{grid-template-columns:1fr 1.1fr}.log-card{grid-column:1/-1;min-height:auto!important}.log{grid-template-columns:1fr 1fr}.stat-label{font-size:11px}}
+@media(max-width:900px){.shell{padding:10px 10px 20px}.arena-layout{grid-template-columns:1fr}.sidebar{display:grid;grid-template-columns:1.15fr 1fr;align-items:start}.threat-key{grid-column:1/-1}.command-row{grid-template-columns:1fr 1fr}.shop{grid-template-columns:1fr 1fr;gap:7px}.shop-item{min-height:86px}.shop-icon{width:37px;height:42px}.shop-icon .icon{width:23px}.shop-desc{font-size:9px}.price{font-size:12px}.shop-footer{display:none}.map-bottom-legend{font-size:9px}.stat{min-height:70px}.stat-value{font-size:24px}}
+@media(max-width:600px){.shell{padding:8px 7px 20px}.topbar{gap:9px}.header{gap:9px;flex-wrap:nowrap}.brand-mark{width:48px;height:48px;flex-basis:48px;border-radius:12px}.brand-mark svg{width:37px;height:37px}h1{font-size:clamp(18px,5.5vw,23px)}.eyebrow{font-size:7px;letter-spacing:.18em}.brand-subline{gap:6px}.version,.status-light{font-size:7px}.icon-btn{width:29px;height:29px;flex-basis:29px;font-size:17px}.header-right{gap:4px}.stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.stat{min-height:66px;padding:7px 8px}.stat-label{font-size:9px;gap:4px}.stat-symbol{font-size:16px}.stat-value{font-size:20px}.stat:nth-child(4),.stat:nth-child(5){min-height:53px}.stat:nth-child(5){grid-column:span 2}.stat:nth-child(5) .stat-value{font-size:21px}.stat-bar{height:4px;margin-top:3px}.arena-layout{gap:8px}.board-head{padding:9px;font-size:10px}.board-title{font-size:10px;gap:5px}.mini-status{font-size:8px;padding:4px 5px}.map-pad-btn{width:30px;height:30px;min-width:30px;min-height:30px}.canvas-badge{font-size:7px;padding:3px 5px;bottom:5px;left:6px}.map-status{font-size:7px;padding:3px 5px;top:5px;right:5px}.map-bottom-legend{padding:7px;justify-content:flex-start;gap:8px;font-size:9px}.legend-line{width:17px}.mobile-pads{display:flex;gap:8px;align-items:center;border-top:1px solid var(--line2);padding:7px 8px}.mobile-pads-row{flex:1;min-width:0}.mobile-pads-label{font-size:10px}.sidebar{display:flex;gap:8px}.shop{grid-template-columns:1fr 1fr;gap:6px;padding:8px}.shop-item{padding:7px;min-height:87px;gap:7px;align-items:flex-start}.shop-icon{width:30px;height:30px}.shop-icon .icon{height:17px;width:17px}.shop-name{font-size:10px}.shop-desc{font-size:9px;line-height:1.35}.shop-extra{font-size:8px}.price{font-size:11px;align-self:flex-end}.price span{font-size:9px}.shop-hotkey{display:none}.command-row{grid-template-columns:1fr;gap:8px}.command-row .card{min-height:0}.board-bottom{padding:9px;grid-template-columns:1.4fr 1fr 1fr}.board-bottom .btn{min-height:44px;font-size:11px}.quick-tower{padding:10px}.quick-upgrade-btn{min-width:126px;min-height:46px}.quick-name{font-size:12px}.quick-desc{font-size:10px}.log{grid-template-columns:1fr}.threat-grid{padding:9px}.footer{font-size:9px}.modal{padding:18px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="topbar">
+    <header class="header">
+      <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 56 56" fill="none"><path d="M28 3 50 11v17c0 14-9 22-22 25C15 50 6 42 6 28V11Z" stroke="#58fbe5" stroke-width="3"/><path d="M13 29h9l4-9 5 17 5-8h8" stroke="#9dfff0" stroke-width="3.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="brand-copy"><div class="eyebrow">CYBERSECURITY TOWER DEFENSE</div><h1>HOSPITAL <span>DEFENSE</span></h1><div class="brand-subline"><span class="version">TACTICAL UI / v3.0</span><span class="status-light"><span class="live-dot"></span> LOCAL / OFFLINE</span></div></div>
+      <div class="header-right"><button class="icon-btn" id="helpBtn" type="button" title="遊び方" aria-label="遊び方">?</button><button class="icon-btn" id="restartBtn" type="button" title="ゲームを最初から" aria-label="最初から">↻</button></div>
+    </header>
+    <section class="stats" aria-label="ゲームの状況">
+      <div class="stat"><div class="stat-label"><span class="stat-symbol">♥</span>診療継続度</div><div class="stat-value"><span id="integrityValue">100</span><em>%</em></div><div class="stat-bar"><i id="integrityBar"></i></div></div>
+      <div class="stat"><div class="stat-label"><span class="stat-symbol">⬡</span>情報保護度</div><div class="stat-value"><span id="privacyValue">100</span><em>%</em></div><div class="stat-bar"><i id="privacyBar"></i></div></div>
+      <div class="stat"><div class="stat-label"><span class="stat-symbol">▤</span>所持SP</div><div class="stat-value"><span id="spValue">360</span><em>SP</em></div></div>
+      <div class="stat"><div class="stat-label"><span class="stat-symbol">≋</span>ウェーブ</div><div class="stat-value"><span id="waveValue">0</span><em>/ 5</em></div></div>
+      <div class="stat"><div class="stat-label"><span class="stat-symbol trophy">★</span>防衛スコア</div><div class="stat-value"><span id="scoreValue">0</span></div></div>
+    </section>
+  </div>
+  <main class="arena-layout">
+    <section class="card battle-card" aria-label="ゲームマップ">
+      <div class="board-head"><div class="board-title"><span class="tiny-symbol">⌘</span> 仮想病院キャンパス <span class="tiny-sep">/</span> <span class="muted">HOSPITAL NETWORK</span></div><div class="mini-status" id="phaseBadge"><span class="live-dot"></span><span id="phaseText">配置準備中</span></div></div>
+      <div class="map-wrap"><canvas id="board" width="960" height="560" tabindex="0" aria-label="病院ネットワークの防衛マップ。丸い設置地点を直接タップしてタワーを配置・選択できます。">このブラウザはCanvasをサポートしていません。</canvas><div class="pad-hit-layer" id="padHitLayer" aria-label="マップ上の設置地点"></div><div class="map-status" id="mapMessage">WAVE 1 / STANDBY</div><div class="canvas-badge">◉ 空き地点をタップして防御設備を配置</div></div>
+      <div class="map-bottom-legend"><span><b class="legend-dot cyan"></b>設置地点</span><span><b class="legend-line main"></b>通常ルート</span><span><b class="legend-line alt"></b>新侵入ルート</span><span><b class="legend-dot range"></b>選択中の射程</span></div>
+      <div class="mobile-pads"><span class="mobile-pads-label">設置番号</span><div class="mobile-pads-row" id="mobilePads" aria-label="配置番号を選択"></div></div>
+      <div class="wave-track"><span id="waveLabel">次：不審メールの増加</span><div class="track"><i id="waveProgress"></i></div><span id="waveCounter">0 / 0</span></div>
+    </section>
+    <aside class="sidebar" aria-label="防御設備と職員教育">
+      <section class="card shop-card"><div class="panel-head"><div class="panel-title"><span class="mini-icon">🛒</span>防御タワーの購入</div><span class="panel-kicker">EQUIPMENT SHOP</span></div><div class="shop" id="shop"></div><div class="shop-footer">① 設備を選択　<span>② マップの丸をタップ</span></div></section>
+      <section class="card training-card"><div class="panel-head"><div class="panel-title"><span class="mini-icon">♧</span>職員教育・人的リスク対策</div><span class="panel-kicker">TRAINING</span></div><div class="training-body"><div class="training-hero"><div class="training-glyph" aria-hidden="true">✦</div><div class="training-content"><div class="training-level" id="trainingLevel">職員教育 Lv.0 / 3</div><div class="training-desc" id="trainingDesc">人的リスクへの備えを強化します。</div></div></div><div class="training-bars" id="trainingBars"><i></i><i></i><i></i></div><button class="btn btn-training" id="trainingBtn" type="button">職員教育を強化する</button></div></section>
+      <section class="threat-key card"><div class="panel-head"><div class="panel-title"><span class="mini-icon">◎</span>脅威の種類</div><span class="panel-kicker">THREATS</span></div><div class="threat-grid"><span><i class="threat-marker t-phish">✉</i>フィッシング</span><span><i class="threat-marker t-auth">♟</i>認証の悪用</span><span><i class="threat-marker t-malware">✹</i>マルウェア</span><span><i class="threat-marker t-insider">⚠</i>人的リスク</span></div></section>
+    </aside>
+  </main>
+  <div class="command-row">
+    <section class="card control-card" aria-label="ゲーム操作"><div class="panel-head"><div class="panel-title">◈ ミッション操作</div><span class="panel-kicker">CONTROLS</span></div><div class="board-bottom"><button class="btn btn-primary launch" id="startBtn" type="button">▶ ウェーブ開始</button><button class="btn pause" id="pauseBtn" type="button" disabled>Ⅱ 一時停止</button><button class="btn speed" id="speedBtn" type="button">×1 通常速度</button><button class="btn bcp" id="bcpBtn" type="button" title="代替運用を実施し診療継続度を一部回復">✚ BCP発動（130 SP）</button></div><div class="controls-note">SPACE 一時停止 ／ 1〜4 設備選択</div></section>
+    <section class="card quick-card" aria-label="選択中の防御設備"><div class="panel-head"><div class="panel-title"><span class="mini-icon">✣</span>選択中のタワー <span class="muted">/ クイック強化</span></div><span class="panel-kicker">UPGRADE LAB</span></div><div class="quick-tower" id="quickTower" aria-label="選択した設備のクイック操作"><div class="quick-text"><span class="quick-name">防御設備を選択</span><span class="quick-desc">マップの設置地点をタップして強化</span></div></div><details class="detail-drawer"><summary>詳細性能・売却の操作を表示</summary><div class="detail" id="detail"><div class="empty-detail">配置済みの設備を選ぶと、性能やアップグレードを確認できます。</div></div></details></section>
+    <section class="card log-card"><div class="panel-head"><div class="panel-title"><span class="mini-icon">▤</span>イベントログ</div><span class="panel-kicker">LATEST ALERTS</span></div><div class="log" id="log" role="log" aria-live="polite"></div></section>
+  </div>
+  <footer class="footer"><span><strong>教育用フィクション：</strong>架空の病院・抽象的な攻撃表現。実環境の構成や侵入手順は含みません。</span><span>OFFLINE READY · HTML / CSS / JAVASCRIPT</span></footer>
+</div>
+<div class="modal-backdrop" id="modalBackdrop" role="presentation"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-top"><div class="modal-icon" id="modalIcon" aria-hidden="true">✦</div><button class="btn" id="modalClose" type="button" aria-label="閉じる">×</button></div><h2 id="modalTitle">遊び方</h2><div id="modalBody"></div><div class="modal-buttons" id="modalButtons"></div></div></div>
+<div class="toast" id="toast" role="status"></div>
+<script>
+(()=>{'use strict';
+  const W=960,H=560,MAX_LEVEL=3,BCP_COST=130,BCP_HEAL=16,TRAINING_COSTS=[110,160,215],TRAINING_SPEED=[1,.79,.60,.43];
+  const canvas=document.getElementById('board'),ctx=canvas.getContext('2d');
+  if(ctx&&typeof ctx.roundRect!=='function')ctx.roundRect=function(x,y,w,h,r){let q=Math.min(typeof r==='number'?r:8,w/2,h/2);this.moveTo(x+q,y);this.lineTo(x+w-q,y);this.quadraticCurveTo(x+w,y,x+w,y+q);this.lineTo(x+w,y+h-q);this.quadraticCurveTo(x+w,y+h,x+w-q,y+h);this.lineTo(x+q,y+h);this.quadraticCurveTo(x,y+h,x,y+h-q);this.lineTo(x,y+q);this.quadraticCurveTo(x,y,x+q,y);this.closePath();return this};
+  // Fallback for older Chromium-based browsers that lack CanvasRenderingContext2D.roundRect.
+  if(ctx&&typeof ctx.roundRect!=='function'){ctx.roundRect=function(x,y,w,h,r){const q=Math.min(Math.max(0,typeof r==='number'?r:8),Math.abs(w)/2,Math.abs(h)/2);this.moveTo(x+q,y);this.lineTo(x+w-q,y);this.quadraticCurveTo(x+w,y,x+w,y+q);this.lineTo(x+w,y+h-q);this.quadraticCurveTo(x+w,y+h,x+w-q,y+h);this.lineTo(x+q,y+h);this.quadraticCurveTo(x,y+h,x,y+h-q);this.lineTo(x,y+q);this.quadraticCurveTo(x,y,x+q,y);this.closePath();return this}}
+  const $=id=>document.getElementById(id);
+  const TOWERS={
+    mail:{name:'メールフィルター',short:'メール対策',icon:'mail',cost:100,upgrade:[85,135],damage:18,rate:.54,range:139,color:'#4cdec3',desc:'不審メールを抑制。フィッシング型に強い。',perk:'強化でフィッシング型への対応強度が追加上昇。',vs:{phish:1.75,auth:.65,malware:.45,insider:.55,boss:.5}},
+    mfa:{name:'多要素認証（MFA）',short:'MFA',icon:'key',cost:140,upgrade:[105,160],damage:22,rate:.76,range:136,color:'#f4c979',desc:'認証情報の悪用に強い。認証型の敵を抑制。',perk:'強化で認証悪用型への対応強度が追加上昇。',vs:{phish:.5,auth:1.95,malware:.55,insider:.55,boss:.6}},
+    edr:{name:'端末検知・対応（EDR）',short:'EDR',icon:'radar',cost:175,upgrade:[130,190],damage:25,rate:.87,range:164,color:'#a6b7ff',desc:'不審な挙動の検知・対応。マルウェア型に強い。',perk:'強化でマルウェア・人的リスク型への対応強度が追加上昇。',vs:{phish:.8,auth:.8,malware:1.85,insider:1.75,boss:1.55}},
+    segment:{name:'ネットワーク分離',short:'分離',icon:'network',cost:155,upgrade:[110,170],damage:15,rate:1.04,range:134,color:'#d5a3ff',desc:'全ての敵の進行を一時的に遅らせる。',perk:'強化で進行遅延の持続時間をさらに延長。',vs:{phish:.9,auth:1,malware:.9,insider:1.1,boss:.78},slow:1.15}
+  };
+  const ENEMIES={
+    phish:{name:'フィッシング',hp:63,speed:77,damage:4,leak:3,reward:13,color:'#ff7b96',radius:12},
+    auth:{name:'認証情報の悪用',hp:96,speed:91,damage:7,leak:7,reward:18,color:'#ffc16f',radius:13},
+    malware:{name:'マルウェア',hp:150,speed:59,damage:10,leak:5,reward:24,color:'#bd9bff',radius:14},
+    insider:{name:'人的リスク由来のマルウェア',hp:170,speed:42,damage:13,leak:10,reward:29,color:'#ff9d6c',radius:15},
+    boss:{name:'大規模障害リスク',hp:540,speed:44,damage:25,leak:21,reward:80,color:'#ff5d82',radius:24}
+  };
+  const WAVE_DEFS=[
+    {title:'不審メールの増加',subtitle:'フィッシング型が中心。まずは基礎防御を。',interval:.96,bonus:95,hpMult:1,units:'phish phish phish auth phish phish auth phish phish phish auth phish phish auth'.split(' ')},
+    {title:'認証リスクの拡大',subtitle:'認証系の敵が増加。MFAの効果を試そう。',interval:.84,bonus:115,hpMult:1.12,units:'phish auth phish auth auth phish auth malware phish auth phish auth malware phish auth phish auth malware'.split(' ')},
+    {title:'端末への脅威',subtitle:'マルウェア型が増加。EDRと分離を組み合わせよう。',interval:.75,bonus:135,hpMult:1.23,units:'malware phish auth malware auth phish malware phish auth malware auth phish malware auth malware phish malware auth phish malware auth phish malware auth'.split(' ')},
+    {title:'複数経路からの圧力',subtitle:'攻撃の種類が多様化。弱い区間を見直そう。',interval:.69,bonus:150,hpMult:1.35,units:'auth phish malware auth phish malware auth phish malware auth malware phish auth malware auth phish malware auth phish malware auth malware phish auth malware auth malware auth'.split(' ')},
+    {title:'最終防衛線',subtitle:'強力な障害リスクが出現。診療継続を守り抜こう。',interval:.65,bonus:0,hpMult:1.45,units:'auth malware phish auth malware auth phish malware auth malware phish auth malware auth phish malware auth malware phish auth malware boss phish auth malware auth malware phish auth malware boss'.split(' ')}
+  ];
+  const PATH=[{x:-25,y:143},{x:163,y:143},{x:163,y:326},{x:372,y:326},{x:372,y:130},{x:596,y:130},{x:596,y:389},{x:821,y:389},{x:821,y:264},{x:992,y:264}];
+  const SIDE_PATH=[{x:953,y:53},{x:800,y:53},{x:800,y:231},{x:821,y:231},{x:821,y:264},{x:992,y:264}];
+  const PADS=[{x:73,y:60},{x:279,y:74},{x:71,y:274},{x:265,y:225},{x:269,y:441},{x:477,y:445},{x:479,y:246},{x:484,y:50},{x:725,y:51},{x:723,y:245},{x:720,y:477},{x:901,y:452},{x:910,y:143}];
+  const lengthMap=nodes=>{const sections=[];let total=0;for(let i=1;i<nodes.length;i++){total+=Math.hypot(nodes[i].x-nodes[i-1].x,nodes[i].y-nodes[i-1].y);sections.push(total)}return {sections,total}};
+  const PRIMARY=lengthMap(PATH),SECONDARY=lengthMap(SIDE_PATH);
+  const PATHLEN=PRIMARY.sections,TOTAL_PATH=PRIMARY.total;
+  // Events are abstract learning scenarios, not technical attack procedures.
+  const EVENT_PLANS={
+    2:[{at:7.4,kind:'human',count:1}],
+    3:[{at:6.6,kind:'route',count:2},{at:12.2,kind:'human',count:1}],
+    4:[{at:7.0,kind:'route',count:3},{at:12.5,kind:'human',count:2}],
+    5:[{at:6.2,kind:'human',count:2},{at:10.5,kind:'route',count:4},{at:17.0,kind:'human',count:1}]
+  };
+  let game={},lastTime=0,toastTimer=null,raf=0,visualT=0,hoverPad=-1;
+  const iconSVG={
+    mail:'<svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
+    key:'<svg class="icon" viewBox="0 0 24 24"><circle cx="8" cy="9" r="4"/><path d="m11 12 8 8m-3-3 2-2m-4 0 2-2"/></svg>',
+    radar:'<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="m12 12 6-6"/></svg>',
+    network:'<svg class="icon" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M12 8v4M5 16v-4h14v4"/></svg>'
+  };
+  function resetGame(){
+    game={phase:'ready',wave:0,sp:360,integrity:100,privacy:100,score:0,kills:0,leaks:0,towers:PADS.map(()=>null),selectedType:'mail',selectedPad:-1,trainingLevel:0,sideRouteOpen:false,waveEvents:[],notice:'',noticeLeft:0,enemies:[],effects:[],queue:[],spawnIndex:0,spawnTimer:0,spawned:0,spawnTotal:0,time:0,speed:1,paused:false,bcpUsed:false,events:[]};
+    hoverPad=-1;lastTime=0;addLog('病院の防衛準備を開始しました。','info');addLog('ショップで設備を選び、マップの＋に配置してください。','info');refreshUI();
+  }
+  function posAt(distance,route='main'){const nodes=route==='side'?SIDE_PATH:PATH,part=route==='side'?SECONDARY:PRIMARY;let d=Math.max(0,Math.min(part.total,distance)),last=0;for(let i=0;i<part.sections.length;i++){if(d<=part.sections[i]){const t=(d-last)/(part.sections[i]-last),a=nodes[i],b=nodes[i+1];return {x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t}}last=part.sections[i]}return {...nodes[nodes.length-1]}}
+  function money(n){return n.toLocaleString('ja-JP')}
+  function levelStats(t){let lv=t.level-1;return {damage:TOWERS[t.type].damage*(1+lv*.37),range:TOWERS[t.type].range+lv*12,rate:TOWERS[t.type].rate*Math.pow(.90,lv)}}
+  function addLog(message,kind='info'){game.events.unshift({message,kind});game.events.length=Math.min(5,game.events.length);renderLog()}
+  function renderLog(){const log=$('log');log.textContent='';for(const item of game.events){const el=document.createElement('div');el.className='log-item '+(item.kind==='warn'?'warn':item.kind==='danger'?'danger':'');const dot=document.createElement('span');dot.className='log-dot';const txt=document.createElement('span');txt.textContent=item.message;el.append(dot,txt);log.append(el)}}
+  function toast(message){const el=$('toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2400)}
+  function pressPad(i){if(game.phase==='won'||game.phase==='lost')return;if(game.towers[i]){game.selectedPad=i;renderDetail();renderQuickTower();renderMobilePads();syncPadButtons()}else buyTower(i)}
+  function initializePadButtons(){const layer=$('padHitLayer');layer.textContent='';PADS.forEach((p,i)=>{const btn=document.createElement('button');btn.type='button';btn.className='map-pad-btn';btn.style.left=(100*p.x/W)+'%';btn.style.top=(100*p.y/H)+'%';btn.dataset.pad=String(i);btn.addEventListener('click',()=>pressPad(i));layer.append(btn)})}
+  function syncPadButtons(){for(const b of $('padHitLayer').children){const i=Number(b.dataset.pad),t=game.towers[i];b.className='map-pad-btn'+(t?' occupied':'')+(game.selectedPad===i?' selected':'');b.setAttribute('aria-label',`地点 ${i+1}：${t?TOWERS[t.type].name+' Lv.'+t.level+'を選択':'現在選んでいる'+TOWERS[game.selectedType].name+'を配置'}`);b.title=t?`地点${i+1} ${TOWERS[t.type].name} Lv.${t.level} / タップして強化`:`地点${i+1} に${TOWERS[game.selectedType].name}を設置`}}
+  function renderQuickTower(){const el=$('quickTower'),pad=game.selectedPad,t=pad>=0?game.towers[pad]:null;el.textContent='';const wrap=document.createElement('div');wrap.className='quick-text';const name=document.createElement('span');name.className='quick-name';const desc=document.createElement('span');desc.className='quick-desc';wrap.append(name,desc);el.append(wrap);
+    if(!t){name.textContent='配置地点を直接タップ';desc.textContent=`選択中：${TOWERS[game.selectedType].name}（${TOWERS[game.selectedType].cost} SP）／設置後は同じ場所から強化`;return}
+    const base=TOWERS[t.type],next=base.upgrade[t.level-1];name.textContent=`地点 ${pad+1}｜${base.name}　Lv.${t.level}/3`;desc.textContent=t.level===3?'最大強化済み（MAX）':`${base.perk} 次の強化：${next} SP`;
+    const btn=document.createElement('button');btn.type='button';btn.className='btn btn-primary quick-upgrade-btn';btn.textContent=t.level===3?'✓ 最大強化':`↑ 強化 ${next} SP`;btn.disabled=t.level===3||game.sp<next||['won','lost'].includes(game.phase);btn.addEventListener('click',()=>upgradeTower(pad));el.append(btn)}
+  function renderTraining(){const lv=game.trainingLevel,cost=TRAINING_COSTS[lv],reduction=Math.round((1-TRAINING_SPEED[lv])*100);$('trainingLevel').textContent=`職員教育 Lv.${lv} / 3`;$('trainingDesc').textContent=lv===0?'未実施：人的リスク型は通常速度で侵攻。研修で早期発見・報告を促す。':`人的リスク型の侵攻速度 −${reduction}%。研修による早期発見・報告をゲーム内の遅延効果として表現。`;[...$('trainingBars').children].forEach((b,i)=>b.classList.toggle('done',i<lv));const btn=$('trainingBtn');btn.textContent=lv===3?'✓ 教育体制 MAX':`職員教育を強化　${cost} SP`;btn.disabled=lv===3||game.sp<cost||['won','lost'].includes(game.phase)}
+  function upgradeTraining(){const lv=game.trainingLevel,cost=TRAINING_COSTS[lv];if(lv>=3||game.sp<cost||['won','lost'].includes(game.phase))return;game.sp-=cost;game.trainingLevel++;addLog(`職員教育をLv.${game.trainingLevel}に強化（-${cost} SP）`);toast(`教育 Lv.${game.trainingLevel}：人的リスク型の侵攻が減速`);refreshUI()}
+  function renderMobilePads(){const el=$('mobilePads');el.textContent='';for(let i=0;i<PADS.length;i++){const t=game.towers[i],btn=document.createElement('button');btn.type='button';btn.className='slot-btn'+(t?' occupied':'')+(game.selectedPad===i?' selected':'');btn.setAttribute('aria-label',`配置場所 ${i+1}：${t?TOWERS[t.type].name:'空き'}`);btn.innerHTML=`<strong>${String(i+1).padStart(2,'0')}</strong><small>${t?TOWERS[t.type].short:'＋ 空き'}</small>`;btn.addEventListener('click',()=>pressPad(i));el.append(btn)}}
+  function renderShop(){const el=$('shop');el.innerHTML='';for(const [idx,id] of Object.keys(TOWERS).entries()){const t=TOWERS[id],btn=document.createElement('button');btn.type='button';btn.dataset.id=id;btn.className='shop-item'+(game.selectedType===id?' active':'');btn.setAttribute('aria-pressed',game.selectedType===id?'true':'false');btn.innerHTML=`<span class="shop-icon">${iconSVG[t.icon]}</span><span class="shop-main"><span class="shop-name">${t.name}</span><span class="shop-desc">${t.desc}</span><span class="shop-extra">設置後 Lv.3まで強化可能</span></span><span class="price">${t.cost}<span>SP</span></span><span class="shop-hotkey">${idx+1}</span>`;btn.addEventListener('click',()=>{game.selectedType=id;game.selectedPad=-1;renderShop();renderDetail();renderQuickTower();syncPadButtons();toast(t.name+'を選択：マップの丸をタップ');});el.append(btn)}}
+  function renderDetail(){const detail=$('detail'),pad=game.selectedPad,tower=pad>=0?game.towers[pad]:null;detail.innerHTML='';if(!tower){detail.innerHTML=`<div class="empty-detail">${game.selectedType?'「'+TOWERS[game.selectedType].name+'」を選択中。マップ上の <strong>＋</strong> を押すと配置できます。':'配置済みの設備を選ぶと、詳細が表示されます。'}</div>`;return}
+    const base=TOWERS[tower.type],s=levelStats(tower),next=base.upgrade[tower.level-1],refund=Math.round(tower.invested*.65);
+    const head=document.createElement('div');head.className='detail-title';head.innerHTML=`<span>${base.name}</span><em>LV.${tower.level} / ${MAX_LEVEL}</em>`;detail.append(head);
+    const p=document.createElement('div');p.className='detail-desc';p.textContent=base.desc;detail.append(p);const perk=document.createElement('div');perk.className='upgrade-perk';perk.textContent=base.perk;detail.append(perk);
+    const metrics=document.createElement('div');metrics.className='detail-metrics';metrics.innerHTML=`<div class="metric"><small>対応強度</small><b>${Math.round(s.damage)}</b></div><div class="metric"><small>対応範囲</small><b>${Math.round(s.range)}</b></div><div class="metric"><small>対応間隔</small><b>${s.rate.toFixed(2)}s</b></div>`;detail.append(metrics);
+    const actions=document.createElement('div');actions.className='detail-actions';
+    const up=document.createElement('button');up.className='btn btn-primary';up.type='button';up.textContent=tower.level===MAX_LEVEL?'✓ MAX LEVEL':`↑ 強化 ${next} SP`;up.disabled=tower.level===MAX_LEVEL||game.sp<next||game.phase==='won'||game.phase==='lost';up.addEventListener('click',()=>upgradeTower(pad));
+    const sell=document.createElement('button');sell.className='btn';sell.type='button';sell.textContent=`売却 +${refund} SP`;sell.disabled=game.phase==='won'||game.phase==='lost';sell.addEventListener('click',()=>sellTower(pad));actions.append(up,sell);detail.append(actions)
+  }
+  function refreshUI(){
+    $('integrityValue').textContent=Math.max(0,Math.round(game.integrity));$('privacyValue').textContent=Math.max(0,Math.round(game.privacy));$('spValue').textContent=money(game.sp);$('waveValue').textContent=game.wave;$('scoreValue').textContent=money(game.score);
+    for(const [key,bar] of [['integrity',$('integrityBar')],['privacy',$('privacyBar')]]){const val=Math.max(0,Math.min(100,game[key]));bar.style.width=val+'%';bar.style.background=val<25?'var(--red)':val<55?'var(--amber)':'var(--teal)'}
+    const active=game.phase==='active',finished=game.phase==='won'||game.phase==='lost';
+    const phaseNames={ready:'配置準備中',active:game.paused?'一時停止中':'防衛中',intermission:'強化フェーズ',won:'防衛成功',lost:'ミッション失敗'};
+    $('phaseText').textContent=phaseNames[game.phase];$('phaseBadge').className='mini-status '+(active?'is-active':game.phase==='lost'?'is-failed':'');
+    $('mapMessage').textContent=game.phase==='won'?'MISSION COMPLETE':game.phase==='lost'?'MISSION FAILED':active?`WAVE ${game.wave} / ACTIVE`:game.wave===0?'WAVE 1 / STANDBY':`WAVE ${Math.min(game.wave+1,5)} / STANDBY`;
+    $('startBtn').disabled=active||finished||game.wave>=5;$('startBtn').textContent=game.wave===0?'▶ ウェーブ 1 開始':game.phase==='intermission'?`▶ ウェーブ ${game.wave+1} 開始`:'▶ ウェーブ開始';
+    $('pauseBtn').disabled=!active;$('pauseBtn').textContent=game.paused?'▶ 再開':'Ⅱ 一時停止';
+    $('speedBtn').textContent=game.speed===1?'×1 通常速度':'×2 倍速';
+    $('bcpBtn').disabled=finished||game.sp<BCP_COST||game.integrity>=100||game.bcpUsed;$('bcpBtn').textContent=game.bcpUsed?'✓ BCP使用済み':`▣ BCP発動（${BCP_COST} SP）`;
+    const current=WAVE_DEFS[game.wave-1],upcoming=WAVE_DEFS[game.wave];
+    $('waveLabel').textContent=active?`進行中：${current.title}`:game.phase==='intermission'&&upcoming?`次：${upcoming.title}`:game.phase==='won'?'全ウェーブ防衛完了':game.phase==='lost'?'病院の防衛機能が停止':upcoming?`次：${upcoming.title}`:'最終結果';
+    $('waveCounter').textContent=active?`${game.spawned} / ${game.spawnTotal} 出現・残 ${game.enemies.length}`:game.phase==='intermission'?`${game.wave} / 5 クリア`:game.phase==='won'?'5 / 5':game.phase==='lost'?`${game.wave} / 5`:'0 / 5';
+    $('waveProgress').style.width=(active&&game.spawnTotal?game.spawned/game.spawnTotal*100:game.phase==='won'?100:0)+'%';
+    renderShop();renderDetail();renderMobilePads();renderQuickTower();renderTraining();syncPadButtons();
+  }
+  function buyTower(i){if(game.towers[i]){pressPad(i);return}const type=game.selectedType,base=TOWERS[type];if(!base)return;if(game.sp<base.cost){toast('SPが足りません。ウェーブでSPを獲得しましょう。');return}if(game.phase==='won'||game.phase==='lost')return;game.sp-=base.cost;game.towers[i]={type,level:1,cooldown:.2,invested:base.cost};game.selectedPad=i;addLog(`${base.name}を配置（-${base.cost} SP）`);refreshUI()}
+  function upgradeTower(i){const t=game.towers[i];if(!t||t.level>=MAX_LEVEL)return;const cost=TOWERS[t.type].upgrade[t.level-1];if(game.sp<cost){toast('SPが足りません');return}game.sp-=cost;t.invested+=cost;t.level++;addLog(`${TOWERS[t.type].short}を Lv.${t.level} に強化（-${cost} SP）`);refreshUI()}
+  function sellTower(i){const t=game.towers[i];if(!t)return;const amount=Math.round(t.invested*.65);game.sp+=amount;addLog(`${TOWERS[t.type].name}を売却（+${amount} SP）`);game.towers[i]=null;game.selectedPad=-1;refreshUI()}
+  function startWave(){if(game.phase!=='ready'&&game.phase!=='intermission')return;if(game.wave>=WAVE_DEFS.length)return;game.wave++;const wave=WAVE_DEFS[game.wave-1];game.phase='active';game.queue=wave.units.slice();game.spawned=0;game.waveEvents=(EVENT_PLANS[game.wave]||[]).map(e=>({...e,at:e.at+(Math.random()-.5)*1.5,fired:false}));game.spawnTotal=game.queue.length+game.waveEvents.reduce((sum,e)=>sum+e.count,0);game.spawnIndex=0;game.spawnTimer=.12;game.time=0;game.paused=false;game.bcpUsed=false;addLog(`WAVE ${game.wave}：${wave.title} が始まりました。`,'warn');toast(`${wave.title}：${wave.subtitle}`);refreshUI()}
+  function spawnEnemy(kind,route='main',startFraction=0){const e=ENEMIES[kind],w=WAVE_DEFS[game.wave-1],routeLen=route==='side'?SECONDARY.total:PRIMARY.total,health=Math.round(e.hp*w.hpMult);game.enemies.push({kind,route,distance:routeLen*startFraction,hp:health,maxHp:health,slowLeft:0,flash:0,uid:Math.random()});game.spawned++}
+  function fireEvent(e){e.fired=true;
+    if(e.kind==='route'){game.sideRouteOpen=true;for(let j=0;j<e.count;j++)spawnEnemy(j%3===0?'malware':'auth','side',j*.05);game.notice=`新たな侵入ルート発生！ 別ルートから ${e.count} 件`;addLog(`新規経路が出現：別ルートから${e.count}件が接近`,'danger');}
+    else{for(let j=0;j<e.count;j++)spawnEnemy('insider','main',.62+Math.min(j*.025,.08));game.notice=`人的リスク発生！ 内部付近に ${e.count} 件`;addLog(`手順逸脱を想定したイベント：内部で${e.count}件のリスク`,'warn');}
+    game.noticeLeft=4.2;toast(game.notice);refreshUI()}
+
+  function activateBCP(){if(game.phase==='won'||game.phase==='lost'||game.bcpUsed||game.integrity>=100||game.sp<BCP_COST)return;game.sp-=BCP_COST;game.integrity=Math.min(100,game.integrity+BCP_HEAL);game.bcpUsed=true;addLog('BCP：代替運用で診療継続度を一部回復（-130 SP）');toast('BCPを発動：診療継続度を一部回復');refreshUI()}
+  function update(dt){visualT+=dt;for(const effect of game.effects)effect.life-=dt;game.effects=game.effects.filter(e=>e.life>0);if(game.phase!=='active'||game.paused)return;
+    const delta=Math.min(.065,dt)*game.speed;game.time+=delta;game.spawnTimer-=delta;game.noticeLeft=Math.max(0,game.noticeLeft-delta);
+    const wave=WAVE_DEFS[game.wave-1];
+    while(game.spawnIndex<game.queue.length&&game.spawnTimer<=0){spawnEnemy(game.queue[game.spawnIndex++]);game.spawnTimer+=wave.interval}for(const event of game.waveEvents){if(!event.fired&&game.time>=event.at)fireEvent(event)}
+    for(let i=game.enemies.length-1;i>=0;i--){const enemy=game.enemies[i],base=ENEMIES[enemy.kind];enemy.slowLeft=Math.max(0,enemy.slowLeft-delta);enemy.flash=Math.max(0,enemy.flash-delta);enemy.distance+=(base.speed*(enemy.slowLeft>0?.61:1)*(enemy.kind==='insider'?TRAINING_SPEED[game.trainingLevel]:1))*delta;if(enemy.distance>=(enemy.route==='side'?SECONDARY.total:TOTAL_PATH)-20){game.enemies.splice(i,1);game.integrity=Math.max(0,game.integrity-base.damage);game.privacy=Math.max(0,game.privacy-base.leak);game.leaks++;refreshUI();const p=posAt((enemy.route==='side'?SECONDARY.total:TOTAL_PATH)-28,enemy.route);game.effects.push({type:'breach',x:p.x,y:p.y,life:.7,max:.7});addLog(`侵入を許しました：診療 -${base.damage} / 保護 -${base.leak}`,'danger');if(game.integrity<=0||game.privacy<=0){finish(false);return}}}
+    for(let i=0;i<game.towers.length;i++){const tower=game.towers[i];if(!tower)continue;tower.cooldown-=delta;if(tower.cooldown>0)continue;const base=TOWERS[tower.type],s=levelStats(tower),pad=PADS[i];let target=null;
+      for(const enemy of game.enemies){const p=posAt(enemy.distance,enemy.route);if(Math.hypot(p.x-pad.x,p.y-pad.y)<=s.range+ENEMIES[enemy.kind].radius){if(!target||enemy.distance/(enemy.route==='side'?SECONDARY.total:TOTAL_PATH)>target.distance/(target.route==='side'?SECONDARY.total:TOTAL_PATH))target=enemy}}
+      if(target){tower.cooldown=s.rate;const ep=posAt(target.distance,target.route),lv=tower.level-1,special=(tower.type==='mail'&&target.kind==='phish')||(tower.type==='mfa'&&target.kind==='auth')||(tower.type==='edr'&&(target.kind==='malware'||target.kind==='insider'));
+        const impact=s.damage*(base.vs[target.kind]||1)*(special?1+lv*.22:1);target.hp-=impact;target.flash=.14;if(base.slow)target.slowLeft=Math.max(target.slowLeft,base.slow+lv*.48);game.effects.push({type:'beam',from:{x:pad.x,y:pad.y},to:ep,color:base.color,life:.16,max:.16});if(target.hp<=0){game.enemies.splice(game.enemies.indexOf(target),1);const targetInfo=ENEMIES[target.kind];game.sp+=targetInfo.reward;game.score+=targetInfo.reward*10;game.kills++;if(game.selectedPad>=0){renderDetail();renderQuickTower()}renderTraining();$('bcpBtn').disabled=game.bcpUsed||game.integrity>=100||game.sp<BCP_COST;game.effects.push({type:'burst',x:ep.x,y:ep.y,color:targetInfo.color,life:.47,max:.47});}}
+      else tower.cooldown=0;
+    }
+    if(game.spawnIndex>=game.queue.length&&game.waveEvents.every(e=>e.fired)&&game.enemies.length===0){game.sp+=wave.bonus;game.score+=Math.round((game.integrity+game.privacy)*6);addLog(`WAVE ${game.wave} 突破！ ボーナス +${wave.bonus} SP`);if(game.wave===WAVE_DEFS.length)finish(true);else{game.phase='intermission';toast(`WAVE ${game.wave} クリア！ +${wave.bonus} SP：設備を強化して次へ`)}refreshUI()}
+  }
+  function finish(success){game.phase=success?'won':'lost';game.paused=false;if(success){game.score+=Math.round(game.integrity*15+game.privacy*15);addLog('最終ウェーブ突破！病院の防衛成功。')}else addLog('診療継続度または情報保護度が0になりました。','danger');refreshUI();showResult(success)}
+  function fitCanvas(){if(!ctx)return;const rect=canvas.getBoundingClientRect();if(!rect.width)return;const ratio=Math.min(2.5,window.devicePixelRatio||1);canvas.width=Math.round(rect.width*ratio);canvas.height=Math.round(rect.width*H/W*ratio);ctx.setTransform(canvas.width/W,0,0,canvas.height/H,0,0)}
+  function roundRect(x,y,w,h,r,fill,stroke,lw=1){ctx.beginPath();ctx.roundRect(x,y,w,h,r);if(fill){ctx.fillStyle=fill;ctx.fill()}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.stroke()}}
+  function line(a,b,c,w=1){ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.strokeStyle=c;ctx.lineWidth=w;ctx.stroke()}
+  function disc(x,y,r,fill,stroke,lw=1){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);if(fill){ctx.fillStyle=fill;ctx.fill()}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.stroke()}}
+  function text(t,x,y,color='#e8f4fa',size=12,align='left',weight=650){ctx.fillStyle=color;ctx.font=`${weight} ${size}px system-ui,sans-serif`;ctx.textAlign=align;ctx.textBaseline='middle';ctx.fillText(t,x,y)}
+  function poly(points,fill,stroke,lw=1){ctx.beginPath();ctx.moveTo(points[0][0],points[0][1]);for(let i=1;i<points.length;i++)ctx.lineTo(points[i][0],points[i][1]);ctx.closePath();if(fill){ctx.fillStyle=fill;ctx.fill()}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.stroke()}}
+  function glow(x,y,r,color){const g=ctx.createRadialGradient(x,y,1,x,y,r);g.addColorStop(0,color);g.addColorStop(1,'#00000000');ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2)}
+  function drawBuilding(b){const {x,y,w,h,label,kind='office',side=18,accent='#59c9e0'}=b;
+    ctx.save();ctx.shadowColor='#000c19';ctx.shadowBlur=22;ctx.shadowOffsetY=11;
+    poly([[x,y+12],[x+side,y],[x+w+side,y],[x+w,y+12]],'#315068','#4b7080',1);ctx.restore();
+    poly([[x,y+12],[x+w,y+12],[x+w,y+h+12],[x,y+h+12]],'#1b3447','#2a5369',1);
+    poly([[x+w,y+12],[x+w+side,y],[x+w+side,y+h],[x+w,y+h+12]],'#102b40','#27475a',1);
+    poly([[x,y+12],[x+side,y],[x+w+side,y],[x+w,y+12]],'#335269','#50798a',1.2);
+    roundRect(x+7,y+19,w-14,h-16,3,'#173b4e80','#3e7b8a4a',.6);
+    for(let row=0;row<Math.max(1,Math.floor((h-30)/17));row++){
+      for(let col=0;col<Math.max(1,Math.floor((w-18)/24));col++){
+        const bx=x+11+col*24,by=y+25+row*17;
+        const lit=((row*13+col*7+Math.round(x))%5!==0);
+        roundRect(bx,by,12,9,1,lit?'#8dd8dd80':'#315e72a1',lit?'#a1e9e796':'#54869a44',.6);
+        if(lit)line({x:bx+6,y:by},{x:bx+6,y:by+9},'#44798a',.65);
+      }
+    }
+    if(kind==='hospital'){
+      glow(x+w*.50,y+29,36,'#42ffe258');text('✚',x+w*.50,y+25,'#9dfff6',34,'center',950);
+    }else if(kind==='server'){
+      for(let k=0;k<3;k++){roundRect(x+w*.55+k*17,y+25,13,29,2,'#081c2e','#45cbe09f',1);for(let j=0;j<3;j++)disc(x+w*.55+4+k*17,y+31+j*7,1.3,'#53f1c8')}
+    }else if(kind==='xray'){
+      roundRect(x+w*.62,y+30,34,30,2,'#0a2942','#77dcec',1.2);text('✚',x+w*.62+17,y+45,'#a2fafa',19,'center',850)
+    }else if(kind==='lab'){
+      text('⌬',x+w*.72,y+50,'#8debf9',26,'center',850)
+    }
+    if(label){const ww=Math.max(72,label.length*11+19);roundRect(x+w*.5-ww/2,y-14,ww,24,5,'#031521e8','#377488ad',1);text(label,x+w*.5,y-1,'#e2f5ff',11,'center',760)}
+  }
+  function drawTree(x,y,r=13){ctx.save();ctx.shadowColor='#000';ctx.shadowBlur=9;ctx.shadowOffsetY=8;disc(x+4,y+3,r*.95,'#122b35');ctx.restore();line({x,y},{x,y:y+r+8},'#456352',3);disc(x,y,r,'#0c4038','#276d55',1);disc(x-4,y-5,r*.55,'#23624d');disc(x+4,y+2,r*.5,'#185644')}
+  function drawBackground(){
+    const bg=ctx.createLinearGradient(0,0,960,560);bg.addColorStop(0,'#0a2739');bg.addColorStop(.45,'#143044');bg.addColorStop(1,'#071525');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+    glow(460,170,460,'#227c9350');glow(760,360,330,'#126a6e35');
+    ctx.lineWidth=.7;ctx.strokeStyle='#38748b24';for(let x=0;x<W;x+=32){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}for(let y=0;y<H;y+=32){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+    // Campus floor / paths / courtyards / green areas.
+    poly([[34,100],[365,24],[831,52],[961,192],[961,549],[532,544],[18,505]],'#173b494a','#4c818a31');
+    for(const [x,y,w,h] of [[11,70,115,88],[400,204,126,119],[686,449,171,92],[783,83,157,138]])roundRect(x,y,w,h,12,'#0a35363d','#2d766c42',1);
+    for(const [x,y,r] of [[120,69,12],[348,61,12],[396,90,11],[745,107,10],[874,82,11],[919,171,10],[85,400,12],[172,491,12],[370,478,11],[595,492,13],[840,503,12],[572,287,11],[690,32,10],[43,473,11],[760,309,12]])drawTree(x,y,r);
+    const buildings=[
+      {x:405,y:34,w:175,h:79,label:'総合病院',kind:'hospital'},
+      {x:187,y:24,w:128,h:86,label:'検査システム',kind:'lab'},
+      {x:645,y:18,w:117,h:105,label:'電子カルテ',kind:'server'},
+      {x:788,y:128,w:130,h:70,label:'医事会計'},
+      {x:35,y:367,w:171,h:97,label:'院内端末'},
+      {x:220,y:393,w:133,h:82,label:'画像診断',kind:'xray'},
+      {x:419,y:241,w:132,h:111,label:'院内システム',kind:'server'},
+      {x:637,y:436,w:135,h:73,label:'部門システム'},
+      {x:808,y:427,w:127,h:76,label:'診療機能'}
+    ];buildings.forEach(drawBuilding);
+    // Hospital grounds decorative signs.
+    poly([[22,507],[109,493],[179,522],[90,542]],'#1e4b6077','#5b8e9c80');
+    text('✚',94,516,'#95dbe2a3',42,'center',900);
+    text('HOSPITAL SYSTEMS / SIMULATED CAMPUS',23,548,'#6695a4',9,'left',750);
+  }
+  function traceRoute(nodes,color,highlight){ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(nodes[0].x,nodes[0].y);for(let i=1;i<nodes.length;i++)ctx.lineTo(nodes[i].x,nodes[i].y);
+    ctx.shadowBlur=20;ctx.shadowColor=highlight;ctx.strokeStyle=color;ctx.lineWidth=25;ctx.globalAlpha=.15;ctx.stroke();ctx.globalAlpha=1;ctx.shadowBlur=12;ctx.strokeStyle=highlight;ctx.lineWidth=13;ctx.stroke();ctx.shadowBlur=4;ctx.strokeStyle='#09283a';ctx.lineWidth=8;ctx.stroke();ctx.strokeStyle=color;ctx.lineWidth=4;ctx.stroke();ctx.setLineDash([7,15]);ctx.lineDashOffset=-visualT*31;ctx.lineWidth=1.7;ctx.strokeStyle='#f4ffffce';ctx.stroke();ctx.setLineDash([]);ctx.restore();}
+  function drawPath(){traceRoute(PATH,'#30fff0','#1097a7');
+    for(let d=90;d<TOTAL_PATH-40;d+=105){const p=posAt(d),p2=posAt(d+7),angle=Math.atan2(p2.y-p.y,p2.x-p.x);ctx.save();ctx.translate(p.x,p.y);ctx.rotate(angle);ctx.beginPath();ctx.moveTo(-6,-5);ctx.lineTo(1,0);ctx.lineTo(-6,5);ctx.strokeStyle='#d4fffd';ctx.lineWidth=2.3;ctx.shadowColor='#8ffff5';ctx.shadowBlur=5;ctx.stroke();ctx.restore()}
+    glow(12,143,47,'#e44d6755');disc(18,143,27,'#42192dce','#ff698a',2.2);text('!',18,142,'#ffe0e9',21,'center',950);roundRect(19,184,98,25,6,'#4b1d30e9','#d76786',1);text('侵入入口 A',68,196,'#ffdde5',11,'center',850);
+    glow(892,275,90,'#5af8ed4d');roundRect(855,208,88,105,12,'#113d4ff5','#62fcf3',2);roundRect(868,225,62,66,5,'#092a40','#b2fff6',1);text('✚',898,251,'#9cfff5',36,'center',900);text('防衛目標',898,282,'#9cfff5',11,'center',850);text('診療の継続',898,329,'#c4f7ef',11,'center',800);
+  }
+  function drawSideRoute(){if(!game.sideRouteOpen)return;traceRoute(SIDE_PATH,'#ffce65','#ba7536');
+    roundRect(790,17,152,26,7,'#5b2c27ef','#febf68',1.5);text('⚠ 新たな侵入ルート',866,30,'#ffe1ab',11,'center',850);}
+
+  function drawPadIcon(type,x,y,color){ctx.save();ctx.translate(x,y);ctx.strokeStyle=color;ctx.lineWidth=2;ctx.lineCap='round';ctx.lineJoin='round';if(type==='mail'){roundRect(-11,-8,22,16,3,null,color,1.8);ctx.beginPath();ctx.moveTo(-10,-7);ctx.lineTo(0,1);ctx.lineTo(10,-7);ctx.stroke()}
+    else if(type==='mfa'){disc(-4,-4,5,null,color,2);ctx.beginPath();ctx.moveTo(-1,0);ctx.lineTo(9,10);ctx.moveTo(4,5);ctx.lineTo(7,2);ctx.stroke()}
+    else if(type==='edr'){disc(0,0,10,null,color,1.7);disc(0,0,4,null,color,1.7);ctx.beginPath();ctx.moveTo(0,-13);ctx.lineTo(0,-8);ctx.moveTo(0,8);ctx.lineTo(0,13);ctx.moveTo(-13,0);ctx.lineTo(-8,0);ctx.moveTo(8,0);ctx.lineTo(13,0);ctx.stroke()}
+    else{disc(0,-8,4,null,color,1.8);disc(-10,8,4,null,color,1.8);disc(10,8,4,null,color,1.8);ctx.beginPath();ctx.moveTo(0,-4);ctx.lineTo(0,3);ctx.lineTo(-10,3);ctx.lineTo(-10,4);ctx.moveTo(0,3);ctx.lineTo(10,3);ctx.lineTo(10,4);ctx.stroke()}ctx.restore()}
+  function drawPads(){for(let i=0;i<PADS.length;i++){const p=PADS[i],tower=game.towers[i],selected=game.selectedPad===i,hover=hoverPad===i;
+    if(!tower){
+      ctx.save();ctx.shadowColor=hover?'#8afff0':'#3feadb';ctx.shadowBlur=hover?20:12;disc(p.x,p.y,20,hover?'#175967c6':'#0b3444c9',hover?'#b8fff6':'#69f6e6',hover?3:2);disc(p.x,p.y,12,'#0e3140dc','#4baeb4cc',.9);ctx.restore();
+      ctx.strokeStyle='#95fff7';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(p.x-6,p.y);ctx.lineTo(p.x+6,p.y);ctx.moveTo(p.x,p.y-6);ctx.lineTo(p.x,p.y+6);ctx.stroke();
+    }else{
+      const base=TOWERS[tower.type],s=levelStats(tower);
+      if(selected||hover){ctx.save();ctx.setLineDash([6,9]);ctx.lineDashOffset=-visualT*15;disc(p.x,p.y,s.range,null,base.color+'cc',2);ctx.setLineDash([]);ctx.restore();glow(p.x,p.y,85,base.color+'48')}
+      ctx.save();ctx.shadowColor=base.color;ctx.shadowBlur=19;disc(p.x,p.y+8,27,'#09232e',base.color,2);disc(p.x,p.y+5,23,'#115267',base.color,1.6);disc(p.x,p.y-1,18,'#0b3143',base.color,1);ctx.restore();
+      roundRect(p.x-18,p.y-34,36,30,6,'#0c2c40ef',base.color,2.5);glow(p.x,p.y-15,31,base.color+'36');drawPadIcon(tower.type,p.x,p.y-20,base.color);
+      for(let j=0;j<tower.level;j++)disc(p.x-9+j*9,p.y+15,3.1,base.color);
+    }
+    if(selected){disc(p.x,p.y+2,30,null,'#f4fffa',2.5)}
+    roundRect(p.x+17,p.y-34,29,15,4,'#062133e5','#3b7a85cc',.6);text(String(i+1).padStart(2,'0'),p.x+31,yClamp(p.y-26),'#c4ebf2',9,'center',900);
+  }}
+  function yClamp(y){return Math.max(9,Math.min(547,y))}
+  function drawEnemies(){for(const enemy of game.enemies){const e=ENEMIES[enemy.kind],p=posAt(enemy.distance,enemy.route),r=e.radius;ctx.save();ctx.shadowColor=e.color;ctx.shadowBlur=enemy.kind==='boss'?28:18;disc(p.x,p.y,r+2,enemy.flash>0?'#fff7df':'#251e35',e.color,enemy.kind==='boss'?3.5:2.7);ctx.restore();ctx.save();ctx.translate(p.x,p.y);
+      if(enemy.kind==='phish'){ctx.strokeStyle=e.color;ctx.lineWidth=1.8;roundRect(-7,-5,14,10,2,null,e.color,1.7);ctx.beginPath();ctx.moveTo(-7,-5);ctx.lineTo(0,1);ctx.lineTo(7,-5);ctx.stroke()}
+      else if(enemy.kind==='auth'){ctx.strokeStyle=e.color;ctx.lineWidth=2;disc(-3,-3,3,null,e.color,1.8);ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(7,7);ctx.moveTo(3,3);ctx.lineTo(6,0);ctx.stroke()}
+      else if(enemy.kind==='malware'||enemy.kind==='insider'){ctx.fillStyle=e.color;ctx.beginPath();ctx.moveTo(0,-8);ctx.lineTo(7,0);ctx.lineTo(0,8);ctx.lineTo(-7,0);ctx.closePath();ctx.fill();disc(0,0,2,'#1c1b33');if(enemy.kind==='insider'){text('!',0,-1,'#24131c',10,'center',900);disc(10,-9,4,'#f7c77f')}}
+      else{ctx.strokeStyle=e.color;ctx.lineWidth=2.6;for(let i=0;i<8;i++){const a=i*Math.PI/4+visualT*.7;ctx.beginPath();ctx.moveTo(Math.cos(a)*18,Math.sin(a)*18);ctx.lineTo(Math.cos(a)*24,Math.sin(a)*24);ctx.stroke()}text('!',0,1,'#ffeaf0',19,'center',900)}ctx.restore();
+      const barW=enemy.kind==='boss'?49:29;roundRect(p.x-barW/2,p.y-r-12,barW,4,2,'#02101b');roundRect(p.x-barW/2,p.y-r-12,barW*Math.max(0,enemy.hp/enemy.maxHp),4,2,e.color);
+      if(enemy.slowLeft>0)disc(p.x+r*.65,p.y-r*.6,4,'#cc98f8');if(enemy.kind==='insider'){roundRect(p.x-29,p.y-r-35,58,17,5,'#61362aca','#ffb06d',1);text('人的リスク',p.x,p.y-r-26,'#ffe8c2',9,'center',850)}
+    }}
+  function drawEffects(){for(const fx of game.effects){const q=fx.life/fx.max;ctx.save();ctx.globalAlpha=Math.max(0,q);if(fx.type==='beam'){ctx.shadowColor=fx.color;ctx.shadowBlur=15;line(fx.from,fx.to,fx.color,4.2);line(fx.from,fx.to,'#fff',1.3);disc(fx.to.x,fx.to.y,5,fx.color)}else if(fx.type==='burst'){disc(fx.x,fx.y,26*(1-q)+5,null,fx.color,2.6)}else if(fx.type==='breach'){disc(fx.x,fx.y,45*(1-q)+10,null,'#ff6585',4)}ctx.restore()}}
+  function drawHUD(){
+    roundRect(13,12,245,27,7,'#051d2fdc','#438da0a6',1);text('◆  HOSPITAL / DEFENSE GRID',24,26,'#b5e5ee',11,'left',900);
+    if(game.phase==='intermission'||game.phase==='ready'){roundRect(313,15,335,28,7,'#0d4039e6','#3cac93c9',1);text(game.phase==='ready'?'防衛施設を設置して「ウェーブ開始」':'ウェーブ突破！ SPで防御設備を強化',480,29,'#c7fff2',12,'center',840)}
+    if(game.noticeLeft>0){const color=game.notice.includes('人的')?'#ffca75':'#ff8297';roundRect(278,69,410,40,9,'#572c36ef',color,2);text('⚠  '+game.notice,483,89,'#ffedf0',14,'center',850)}
+    if(game.paused){ctx.fillStyle='#03101bd0';ctx.fillRect(0,0,W,H);roundRect(337,229,286,93,13,'#0b2d3eea','#67f5e1',2);text('Ⅱ 一時停止中',480,278,'#ecfffd',26,'center',900)}
+  }
+
+  function render(){if(!ctx)return;ctx.clearRect(0,0,W,H);drawBackground();drawPath();drawSideRoute();drawPads();drawEnemies();drawEffects();drawHUD()}
+  function frame(ts){if(!lastTime)lastTime=ts;const dt=Math.min(.065,Math.max(0,(ts-lastTime)/1000));lastTime=ts;update(dt);render();if(game.phase==='active'&&!game.paused&&ts%180<17){ // cheap HUD updates between expensive DOM changes
+      $('spValue').textContent=money(game.sp);$('scoreValue').textContent=money(game.score);$('waveCounter').textContent=`${game.spawned} / ${game.spawnTotal} 出現・残 ${game.enemies.length}`;$('waveProgress').style.width=(game.spawnTotal?100*game.spawned/game.spawnTotal:0)+'%';
+    }
+    raf=requestAnimationFrame(frame)}
+  function handleBoard(e){if(game.phase==='won'||game.phase==='lost')return;const rect=canvas.getBoundingClientRect(),x=(e.clientX-rect.left)/rect.width*W,y=(e.clientY-rect.top)/rect.height*H;let near=-1,dist=36;for(let i=0;i<PADS.length;i++){const d=Math.hypot(PADS[i].x-x,PADS[i].y-y);if(d<dist){dist=d;near=i}}
+    if(near<0){game.selectedPad=-1;renderDetail();renderQuickTower();syncPadButtons();return}pressPad(near)}
+  function moveHover(e){const rect=canvas.getBoundingClientRect(),x=(e.clientX-rect.left)/rect.width*W,y=(e.clientY-rect.top)/rect.height*H;let near=-1,dist=30;for(let i=0;i<PADS.length;i++){const d=Math.hypot(PADS[i].x-x,PADS[i].y-y);if(d<dist){dist=d;near=i}}hoverPad=near;canvas.style.cursor=near>=0?'pointer':'crosshair'}
+  let lastFocus=null;
+  function closeModal(){const backdrop=$('modalBackdrop');backdrop.classList.remove('open');backdrop.dataset.restorePause='0';if(lastFocus&&lastFocus.isConnected)lastFocus.focus()}
+  function openModal(title,bodyHTML,buttons,closable=true){$('modalBackdrop').dataset.restorePause='0';lastFocus=document.activeElement;$('modalTitle').textContent=title;$('modalBody').innerHTML=bodyHTML;$('modalButtons').innerHTML='';$('modalClose').style.visibility=closable?'visible':'hidden';for(const b of buttons){const btn=document.createElement('button');btn.className='btn '+(b.primary?'btn-primary':'');btn.textContent=b.label;btn.addEventListener('click',()=>{closeModal();b.action?.()});$('modalButtons').append(btn)}$('modalBackdrop').classList.add('open');$('modalButtons').querySelector('button')?.focus()}
+  function showHelp(){const wasActive=game.phase==='active'&&!game.paused;if(wasActive)game.paused=true;refreshUI();openModal('遊び方・作戦ガイド',`<p>あなたは架空の病院の防衛担当者。<strong>診療継続度と情報保護度を保ちながら、5ウェーブを突破</strong>してください。</p><ul><li>ショップで防御設備を選択 → マップ上の <strong>＋</strong> に配置</li><li><strong>▶ ウェーブ開始</strong>で敵が出現。設備は自動で迎撃</li><li>撃退でSPを獲得。<strong>どの防御設備も</strong>配置地点を再度タップしてLv.3まで強化できます</li><li>選んだ設備はマップ直下の強化ボタンでそのままアップグレードできます</li><li>メール対策はフィッシング、MFAは認証系、EDRはマルウェアに強い</li><li>ネットワーク分離は敵の進行を一時的に遅くします</li><li>第2ウェーブ以降、手順逸脱を想定した人的リスクが<strong>マップ途中に突然出現</strong>します</li><li>第3ウェーブ以降は<strong>別の侵入ルート</strong>が突然発生。上側の防衛も必要です</li><li><strong>職員教育（全体強化）</strong>で人的リスク型の侵攻が遅くなります</li><li>BCPは診療継続度のみ一部回復（ウェーブごとに1回まで）</li><li>設備は65%返金で売却可能。途中で一時停止・倍速もできます</li></ul><p style="font-size:11px">※ このゲームは教育向けに対策効果を抽象化しています。実際のサイバー攻撃手順や病院の設備構成は再現していません。</p>`,[{label:'ゲームに戻る',primary:true,action:()=>{if(wasActive){game.paused=false;refreshUI()}}}],true);
+    // Restore pause state when closing by backdrop or ×, too.
+    $('modalBackdrop').dataset.restorePause=wasActive?'1':'0';}
+  function showResult(win){const grade=win?(game.integrity>=85&&game.privacy>=85?'S':game.integrity>=60&&game.privacy>=60?'A':'B'):'—';$('modalIcon').textContent=win?'★':'!';$('modalIcon').style.color=win?'var(--teal)':'var(--red)';const body=`<p>${win?'全5ウェーブを防衛しました。設備の組み合わせと投資判断が成果につながりました。':'診療継続度または情報保護度が0になりました。防衛設備の配置や強化順を見直しましょう。'}</p><div class="result-grid"><div><small>総合評価</small><strong>${grade}</strong></div><div><small>防衛スコア</small><strong>${money(game.score)}</strong></div><div><small>撃退数</small><strong>${game.kills}</strong></div><div><small>診療継続</small><strong>${Math.round(game.integrity)}%</strong></div><div><small>情報保護</small><strong>${Math.round(game.privacy)}%</strong></div><div><small>侵入数</small><strong>${game.leaks}</strong></div></div><p style="font-size:11px">ふりかえり：どの脅威に対して防御が不足したか、限られたSPをどう配分すべきだったか考えてみましょう。</p>`;
+    openModal(win?'防衛成功！ ミッション完了':'防衛失敗 — 再挑戦しよう',body,[{label:'もう一度プレイ',primary:true,action:resetGame},{label:'結果を確認',action:()=>{}}],true)}
+  function doRestart(){if(game.phase==='ready'&&game.wave===0&&game.trainingLevel===0&&game.towers.every(t=>!t)){resetGame();return}const resume=game.phase==='active'&&!game.paused;if(resume){game.paused=true;refreshUI()}openModal('ゲームを最初からやり直しますか？','<p>配置した設備、ポイント、スコア、進行状況はすべて初期化されます。</p>',[{label:'初期化する',primary:true,action:resetGame},{label:'キャンセル',action:()=>{if(resume){game.paused=false;refreshUI()}}}]);$('modalBackdrop').dataset.restorePause=resume?'1':'0'}
+  $('trainingBtn').addEventListener('click',upgradeTraining);
+  $('startBtn').addEventListener('click',startWave);
+  $('pauseBtn').addEventListener('click',()=>{if(game.phase!=='active')return;game.paused=!game.paused;refreshUI()});
+  $('speedBtn').addEventListener('click',()=>{game.speed=game.speed===1?2:1;refreshUI();toast(game.speed===1?'通常速度に変更':'2倍速に変更')});
+  $('bcpBtn').addEventListener('click',activateBCP);
+  $('helpBtn').addEventListener('click',showHelp);
+  $('restartBtn').addEventListener('click',doRestart);
+  $('modalClose').addEventListener('click',()=>{const restore=$('modalBackdrop').dataset.restorePause==='1';$('modalBackdrop').dataset.restorePause='0';closeModal();if(restore&&game.phase==='active'){game.paused=false;refreshUI()}});
+  $('modalBackdrop').addEventListener('click',e=>{if(e.target===$('modalBackdrop'))$('modalClose').click()});
+  canvas.addEventListener('pointerdown',handleBoard);canvas.addEventListener('pointermove',moveHover);canvas.addEventListener('pointerleave',()=>{hoverPad=-1});
+  window.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('modalBackdrop').classList.contains('open')){$('modalClose').click();return}if($('modalBackdrop').classList.contains('open')||/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||''))return;
+    if('1234'.includes(e.key)&&e.key.length===1){const t=Object.keys(TOWERS)[Number(e.key)-1];if(t){game.selectedType=t;game.selectedPad=-1;renderShop();renderDetail();renderQuickTower();syncPadButtons();toast(TOWERS[t].name+'を選択')}}
+    if(e.code==='Space'){e.preventDefault();if(game.phase==='active'){$('pauseBtn').click()}}
+    if(e.key==='Enter'&&document.activeElement===canvas){e.preventDefault();startWave()}
+  });
+  window.addEventListener('resize',fitCanvas);
+  // No network calls, third-party scripts, analytics, or personal data collection.
+  initializePadButtons();resetGame();fitCanvas();raf=requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

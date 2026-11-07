@@ -1,0 +1,50 @@
+/* HOSPITAL DEFENSE v3 - slide panel UI; load after styles.css */
+.layout{grid-template-columns:minmax(0,1fr);max-width:1120px;margin-inline:auto}
+    .command-bar{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 13px;background:linear-gradient(90deg,#10303f,#0c2230);border-bottom:1px solid #2d5062;min-height:66px}
+    .command-buttons{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;flex:0 1 565px;min-width:0}
+    .command-btn{border:1px solid #3a6070;background:#1b3546;color:#c7e0e8;display:flex;align-items:center;justify-content:center;gap:7px;border-radius:10px;min-height:43px;padding:8px 10px;font-size:12px;font-weight:800;transition:background .16s,border-color .16s,box-shadow .16s}
+    .command-btn .icon{height:18px;width:18px;color:#83f1dc}
+    .command-btn:hover{background:#254958;border-color:#51c7b2}
+    .command-btn[aria-expanded="true"]{background:#1a5556;border-color:#66f2d9;box-shadow:inset 0 0 0 1px #48c8b835,0 0 15px #1dcdaa22;color:#f2fffd}
+    .command-btn:focus-visible,.drawer-close:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+    .quick-tower{background:#142f3c;border:1px solid #315b64;border-radius:10px;display:flex;align-items:center;gap:9px;padding:7px 10px;min-height:44px;min-width:0;flex:1;margin:0;flex-wrap:nowrap}
+    .quick-tower .quick-text{min-width:0;flex:1;display:grid;gap:1px}
+    .quick-tower .quick-name{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .quick-tower .quick-desc{font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .quick-tower .quick-upgrade-btn{padding:7px 10px;min-height:34px;font-size:11px;flex:0 0 auto}
+    .pad-picker{display:none;background:#0d2434;border-top:1px solid var(--line2)}
+    .pad-picker summary{cursor:pointer;user-select:none;padding:10px 13px;color:#a5d8dd;font-size:11px;font-weight:780;list-style-position:inside}
+    .pad-picker .mobile-pads{display:flex}
+    body.drawer-open{overflow:hidden}
+    .drawer-backdrop{position:fixed;inset:0;background:#020b16ad;opacity:0;visibility:hidden;pointer-events:none;z-index:30;transition:opacity .22s,visibility .22s;border:0;border-radius:0;padding:0}
+    .drawer-backdrop.open{opacity:1;visibility:visible;pointer-events:auto}
+    .control-drawer{position:fixed;z-index:31;top:12px;right:12px;bottom:12px;width:min(420px,calc(100vw - 24px));display:flex;flex-direction:column;overflow:hidden;border:1px solid #498e96;border-radius:18px;background:linear-gradient(155deg,#112d3f,#0b1c2b 55%);box-shadow:-20px 0 90px #010b1688,0 0 0 1px #66e8ce16;transform:translateX(calc(100% + 30px));visibility:hidden;pointer-events:none;transition:transform .26s cubic-bezier(.22,1,.36,1),visibility .26s}
+    .control-drawer.open{transform:translateX(0);visibility:visible;pointer-events:auto}
+    .drawer-header{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:23px 22px 17px;border-bottom:1px solid #2d5263;background:#193649b8}
+    .drawer-title-group{min-width:0}
+    .drawer-eyebrow{display:block;font-size:10px;letter-spacing:.16em;font-weight:850;color:#6adfc9;margin-bottom:4px}
+    .drawer-header h2{margin:0;font-size:19px;line-height:1.3;letter-spacing:.015em}
+    .drawer-close{flex:0 0 38px;width:38px;height:38px;border-radius:10px;border:1px solid #4c7788;background:#204253;color:#e9f8fc;font-size:19px;display:grid;place-items:center}
+    .drawer-close:hover{background:#315b6d}
+    .drawer-body{padding:18px 16px;min-height:0;flex:1;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#477481 #0d2433}
+    .drawer-intro{font-size:12px;color:#b8d2dd;line-height:1.8;margin:0 4px 16px}
+    .drawer-intro strong{color:#6aebd4}
+    .drawer-note{margin:12px 4px 3px;color:#89aebb;font-size:11px;line-height:1.8}
+    .drawer-view[hidden]{display:none!important}
+    .drawer-view .shop{padding:0;grid-template-columns:1fr}
+    .drawer-view .shop-item{min-height:81px;padding:11px 12px}
+    .drawer-view .shop-hotkey{right:9px;top:6px}
+    .drawer-view .training-body{padding:2px 3px 10px;gap:17px}
+    .drawer-view .training-level{font-size:16px}
+    .drawer-view .training-desc{font-size:12px}
+    .drawer-view .training-body .btn{min-height:48px}
+    .drawer-view .detail{padding:0 3px 15px;min-height:0}
+    .drawer-view .empty-detail{font-size:13px}
+    .drawer-map-action{width:100%;margin-top:10px;min-height:42px}
+    .drawer-view .log{padding:0 3px}
+    .drawer-view .log-item{font-size:12px;padding:11px 0}
+    .drawer-footer{border-top:1px solid #29495b;padding:13px 20px;display:flex;align-items:center;gap:8px;font-size:10px;color:#8bb6c0;line-height:1.6;background:#0c2130}
+    .drawer-footer .live-dot{flex-shrink:0}
+    @media(max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}.command-bar{gap:9px}.quick-tower{flex:0 1 310px}}
+    @media(max-width:680px){.command-bar{flex-wrap:wrap;padding:8px;gap:7px}.command-buttons{flex-basis:100%;gap:6px}.command-btn{min-height:46px;flex-direction:column;gap:1px;font-size:10px;padding:5px 2px}.command-btn .icon{width:19px;height:19px}.quick-tower{flex:1 1 100%;min-height:39px;padding:6px 10px}.quick-tower .quick-name{font-size:11px}.pad-picker{display:block}.control-drawer{top:6px;right:6px;bottom:6px;width:min(410px,calc(100vw - 12px));border-radius:15px}.drawer-header{padding:19px 16px 14px}.drawer-body{padding:15px 13px}.drawer-footer{padding:11px 14px}.board-bottom .btn{flex:1 1 auto}.board-bottom .btn-primary{min-width:135px}}
+    @media(prefers-reduced-motion:reduce){.drawer-backdrop,.control-drawer{transition:none!important}}
