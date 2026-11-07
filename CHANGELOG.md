@@ -1,5 +1,11 @@
 # HOSPITAL DEFENSE — CHANGELOG
 
+## v4.0.1 — アイコン採用（2026-11-07）
+
+- 提供された病院サイバー防衛アイコンをブラウザタブ用faviconと画面左上ロゴに採用。
+- `assets/favicon.ico` と `assets/hospital-defense-icon.png` を追加。
+- 既存のゲームシステム、チュートリアル、難易度、保守・不確実性処理は変更なし。
+
 ## v4.0 C版：本格リスク管理シミュレーション（2026-11-07）
 
 - EASY / NORMAL / HARDの3難易度を追加。進行開始後は難易度を固定。
