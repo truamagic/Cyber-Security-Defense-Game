@@ -1,0 +1,40 @@
+/* HOSPITAL DEFENSE v4.1 — main menu (PC first, responsive) */
+#titleMenu[hidden],#gameShell[hidden]{display:none!important}
+.start-screen{min-height:100svh;display:flex;align-items:center;justify-content:center;padding:clamp(16px,4vw,44px);background:radial-gradient(ellipse 660px 390px at 50% 12%,#1a636060,transparent 80%),radial-gradient(ellipse 730px 420px at 100% 100%,#22426a55,transparent 78%),#081420;color:#ecfbfc}
+.start-card{width:min(100%,850px);padding:clamp(21px,4vw,43px);border:1px solid #366e7a;border-radius:24px;background:linear-gradient(145deg,#102d40ef,#0b1d2ced);box-shadow:0 28px 100px #0008,0 0 0 1px #61ddbe11;display:flex;flex-direction:column;gap:24px;position:relative;overflow:hidden}
+.start-card:before{content:"";position:absolute;top:0;left:28px;right:28px;height:2px;background:linear-gradient(90deg,transparent,#65ecd2,transparent);opacity:.75}
+.start-brand{display:flex;align-items:center;gap:20px}
+.start-logo{width:86px;height:86px;object-fit:cover;flex-shrink:0;border-radius:18px;border:1px solid #53998c;box-shadow:0 0 25px #25ccae33}
+.start-eyebrow{font-size:10px;letter-spacing:.2em;font-weight:850;color:#70ead5;margin:0 0 7px}
+.start-brand h1{font-size:clamp(27px,4.2vw,43px);line-height:1.1;font-weight:900;letter-spacing:.035em;margin:0;color:#f3fffd}
+.start-brand h1 span{color:#51e7c6}
+.start-subtitle{margin:11px 0 0;font-size:12px;color:#bbd8dc;line-height:1.7}
+.start-setup{display:grid;gap:20px}
+.start-setting{background:#0b2433;border:1px solid #2f5266;border-radius:14px;padding:16px}
+.start-setting-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.start-setting-heading h2{margin:0;font-size:14px;font-weight:850}
+.start-setting-heading span{font-size:10px;color:#8abec7;letter-spacing:.1em;font-weight:700}
+.start-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.start-option{background:#173649;border:1px solid #3a6173;border-radius:11px;min-height:73px;padding:11px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;color:#dbedf2;transition:background .15s,border-color .15s,box-shadow .15s}
+.start-option strong{font-size:16px;letter-spacing:.035em}
+.start-option small{font-size:10px;color:#a9c1cb;line-height:1.5}
+.start-option:hover{background:#215367;border-color:#73b7b8}
+.start-option[aria-pressed="true"]{background:#1a5552;border-color:#6ef2d2;box-shadow:inset 0 0 0 1px #70eace44,0 0 16px #34d5bb16}
+.start-option[aria-pressed="true"] strong{color:#93fbe0}
+.start-option[aria-pressed="true"] small{color:#c6f4e8}
+.start-option:focus-visible,.start-action:focus-visible{outline:3px solid #ffd37f;outline-offset:3px}
+.start-footer{display:flex;flex-direction:column;gap:14px}
+.start-selection{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#0a2030;border:1px solid #294e62;border-radius:10px;padding:10px 13px}
+.start-selection>span{font-size:11px;color:#a5bfcd}
+.start-selection strong{font-size:13px;color:#99fbe5;letter-spacing:.05em}
+.start-actions{display:grid;grid-template-columns:1.2fr 1fr;gap:10px}
+.start-action{border-radius:12px;min-height:54px;padding:13px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:850}
+.start-action-primary{background:linear-gradient(110deg,#72e9ca,#39c3ac);color:#0a3334;border:1px solid #a0ffe9}
+.start-action-primary:hover{background:#8efbe2}
+.start-action-secondary{background:#1b3549;border:1px solid #4e7e8d;color:#e3f2f6}
+.start-action-secondary:hover{background:#275168}
+.start-footnote{color:#86a7b6;font-size:10px;line-height:1.8;margin:0;text-align:center}
+.session-indicator{display:inline-flex;align-items:center;gap:7px;border:1px solid #3e887e;border-radius:10px;background:#153f44;padding:8px 11px;color:#c2fbea;font-size:11px;font-weight:800;white-space:nowrap}
+.session-indicator span+span{padding-left:8px;border-left:1px solid #478a87;color:#ffd9a1}
+@media(max-width:620px){.start-screen{align-items:flex-start;padding:14px 10px;min-height:100svh}.start-card{padding:19px 14px;border-radius:17px;gap:20px}.start-brand{gap:12px}.start-logo{width:57px;height:57px;border-radius:11px}.start-brand h1{font-size:clamp(22px,6.1vw,30px)}.start-eyebrow{font-size:8px;letter-spacing:.13em}.start-subtitle{font-size:10px;margin-top:7px}.start-setting{padding:12px}.start-options{gap:6px}.start-option{min-height:74px;padding:9px 4px}.start-option strong{font-size:13px}.start-option small{font-size:9px}.start-actions{grid-template-columns:1fr}.start-action{min-height:49px}}
+@media(prefers-reduced-motion:reduce){.start-option{transition:none}}

@@ -11,25 +11,65 @@
   <link rel="stylesheet" href="./css/drawer.css">
   <link rel="stylesheet" href="./css/tutorial.css">
   <link rel="stylesheet" href="./css/risk.css">
+  <link rel="stylesheet" href="./css/menu.css">
 </head>
 <body>
-<div class="shell">
+<section class="start-screen" id="titleMenu" aria-labelledby="startTitle">
+  <div class="start-card">
+    <div class="start-brand">
+      <img src="./assets/hospital-defense-icon.png" width="86" height="86" alt="" class="start-logo">
+      <div><p class="start-eyebrow">CYBERSECURITY TOWER DEFENSE / MAIN MENU</p>
+        <h1 id="startTitle" tabindex="-1">HOSPITAL <span>DEFENSE</span></h1>
+        <p class="start-subtitle">守るのはシステムだけではない。診療を止めないことが使命。</p>
+      </div>
+    </div>
+    <div class="start-setup" aria-label="ゲーム開始設定">
+      <section class="start-setting" aria-labelledby="menuModeLabel">
+        <div class="start-setting-heading"><h2 id="menuModeLabel">難易度を選択</h2><span>RISK LEVEL</span></div>
+        <div class="start-options" role="group" aria-label="難易度">
+          <button type="button" class="start-option" data-menu-mode="easy" aria-pressed="false"><strong>EASY</strong><small>設備劣化なし・初心者向け</small></button>
+          <button type="button" class="start-option" data-menu-mode="normal" aria-pressed="true"><strong>NORMAL</strong><small>保守と不確実性を導入</small></button>
+          <button type="button" class="start-option" data-menu-mode="hard" aria-pressed="false"><strong>HARD</strong><small>故障・導入遅延が増加</small></button>
+        </div>
+      </section>
+      <section class="start-setting" aria-labelledby="menuWaveLabel">
+        <div class="start-setting-heading"><h2 id="menuWaveLabel">ウェーブ数を選択</h2><span>MISSION LENGTH</span></div>
+        <div class="start-options" role="group" aria-label="ウェーブ数">
+          <button type="button" class="start-option" data-menu-waves="3" aria-pressed="false"><strong>3 WAVE</strong><small>短時間で挑戦</small></button>
+          <button type="button" class="start-option" data-menu-waves="5" aria-pressed="true"><strong>5 WAVE</strong><small>標準的な防衛戦</small></button>
+          <button type="button" class="start-option" data-menu-waves="7" aria-pressed="false"><strong>7 WAVE</strong><small>長期戦・追加ウェーブ</small></button>
+        </div>
+      </section>
+    </div>
+    <div class="start-footer">
+      <div class="start-selection"><span>現在の設定</span><strong id="menuSelectionSummary" aria-live="polite">NORMAL / 5 WAVE</strong></div>
+      <div class="start-actions">
+        <button type="button" id="menuStartBtn" class="start-action start-action-primary">▶ ゲームを開始する</button>
+        <button type="button" id="menuTutorialBtn" class="start-action start-action-secondary">🎓 初心者チュートリアル</button>
+      </div>
+      <p class="start-footnote">チュートリアルは専用の短い練習です。ゲーム終了後はこのメニューへ戻れます。<br>数値・イベントは架空の教育用ゲーム設定です。</p>
+    </div>
+  </div>
+</section>
+<div class="shell" id="gameShell" hidden>
   <header class="header">
     <div class="brand-mark" aria-hidden="true"><img src="./assets/hospital-defense-icon.png" width="52" height="52" alt="" decoding="async"></div>
-    <div class="brand-copy"><div class="eyebrow">CYBERSECURITY TOWER DEFENSE</div><h1>HOSPITAL <span>DEFENSE</span> <span class="version">C / RISK 4.0.1</span></h1></div>
+    <div class="brand-copy"><div class="eyebrow">CYBERSECURITY TOWER DEFENSE</div><h1>HOSPITAL <span>DEFENSE</span> <span class="version">C / RISK 4.1</span></h1></div>
     <div class="header-right">
       <span class="header-note"><span class="live-dot"></span> OFFLINE MODE / 通信なし</span>
-      <label class="difficulty-control" for="difficultySelect">難易度 <select id="difficultySelect" aria-label="難易度を選択"><option value="easy">EASY・入門</option><option value="normal" selected>NORMAL・標準</option><option value="hard">HARD・高難度</option></select></label>
+      <select id="difficultySelect" hidden aria-hidden="true"><option value="easy">EASY</option><option value="normal" selected>NORMAL</option><option value="hard">HARD</option></select>
+      <span id="gameSessionInfo" class="session-indicator" aria-label="現在のゲーム設定"><span id="gameSessionMode">NORMAL</span><span id="gameSessionWaves">5 WAVE</span></span>
       <button class="btn btn-tutorial" id="tutorialBtn" type="button">🎓 チュートリアル</button>
       <button class="btn" id="helpBtn" type="button">？ 遊び方</button>
       <button class="btn" id="restartBtn" type="button">↻ 最初から</button>
+      <button class="btn" id="backToMenuBtn" type="button">⌂ メニューへ</button>
     </div>
   </header>
   <section class="stats" aria-label="ゲームの状況">
     <div class="stat"><div class="stat-label"><svg class="icon" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V21H3zM9 15h6m-3-3v6"/></svg>診療継続度</div><div class="stat-value"><span id="integrityValue">100</span><em>%</em></div><div class="stat-bar"><i id="integrityBar"></i></div></div>
     <div class="stat"><div class="stat-label"><svg class="icon" viewBox="0 0 24 24"><path d="m12 2 8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="m8.5 12 2.2 2.2 4.8-4.8"/></svg>情報保護度</div><div class="stat-value"><span id="privacyValue">100</span><em>%</em></div><div class="stat-bar"><i id="privacyBar"></i></div></div>
     <div class="stat"><div class="stat-label">✦ 所持SP</div><div class="stat-value"><span id="spValue">360</span><em>SP</em></div></div>
-    <div class="stat"><div class="stat-label">◈ ウェーブ</div><div class="stat-value"><span id="waveValue">0</span><em>/ 5</em></div></div>
+    <div class="stat"><div class="stat-label">◈ ウェーブ</div><div class="stat-value"><span id="waveValue">0</span><em>/ <span id="waveLimitValue">5</span></em></div></div>
     <div class="stat"><div class="stat-label">⌁ 防衛スコア</div><div class="stat-value"><span id="scoreValue">0</span></div></div>
   </section>
   <section class="risk-summary" id="riskSummary" aria-label="設備・運用リスクの状況"><div><span>運用リスク予測</span><strong id="riskChance">20%</strong></div><div><span>設備の平均健全度</span><strong id="riskHealth">—</strong></div><div><span>教育の定着度</span><strong id="riskAdherence">72%</strong></div><div><span>未対応・更新待ち</span><strong id="riskProblems">0件</strong></div><button type="button" class="risk-detail-trigger" id="riskDetailBtn">運用管理を開く ›</button></section>
@@ -109,5 +149,6 @@
 <script src="./js/game-data.js" defer></script>
 <script src="./js/risk-sim.js" defer></script>
 <script src="./js/app.js" defer></script>
+<script src="./js/menu.js" defer></script>
 </body>
 </html>

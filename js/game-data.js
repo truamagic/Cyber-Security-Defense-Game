@@ -23,7 +23,9 @@ const TOWERS={
     {title:'認証リスクの拡大',subtitle:'認証系の敵が増加。MFAの効果を試そう。',interval:.84,bonus:115,hpMult:1.12,units:'phish auth phish auth auth phish auth malware phish auth phish auth malware phish auth phish auth malware'.split(' ')},
     {title:'端末への脅威',subtitle:'マルウェア型が増加。EDRと分離を組み合わせよう。',interval:.75,bonus:135,hpMult:1.23,units:'malware phish auth malware auth phish malware phish auth malware auth phish malware auth malware phish malware auth phish malware auth phish malware auth'.split(' ')},
     {title:'複数経路からの圧力',subtitle:'攻撃の種類が多様化。弱い区間を見直そう。',interval:.69,bonus:150,hpMult:1.35,units:'auth phish malware auth phish malware auth phish malware auth malware phish auth malware auth phish malware auth phish malware auth malware phish auth malware auth malware auth'.split(' ')},
-    {title:'最終防衛線',subtitle:'強力な障害リスクが出現。診療継続を守り抜こう。',interval:.65,bonus:0,hpMult:1.45,units:'auth malware phish auth malware auth phish malware auth malware phish auth malware auth phish malware auth malware phish auth malware boss phish auth malware auth malware phish auth malware boss'.split(' ')}
+    {title:'最終防衛線',subtitle:'強力な障害リスクが出現。診療継続を守り抜こう。',interval:.65,bonus:0,hpMult:1.45,units:'auth malware phish auth malware auth phish malware auth malware phish auth malware auth phish malware auth malware phish auth malware boss phish auth malware auth malware phish auth malware boss'.split(' ')},
+    {title:'障害連鎖の拡大',subtitle:'長期戦。設備健全度と保守体制が試されます。',interval:.62,bonus:190,hpMult:1.57,units:'malware auth phish malware auth malware phish auth malware auth malware phish auth malware phish malware auth malware phish auth malware boss auth phish malware auth'.split(' ')},
+    {title:'最終防衛指令',subtitle:'追加の最終ウェーブ。蓄えた対策とBCPを総動員しましょう。',interval:.59,bonus:0,hpMult:1.70,units:'auth malware phish malware auth phish malware auth malware phish auth malware boss phish malware auth malware phish auth malware boss malware auth phish malware auth malware boss'.split(' ')}
   ];
   const PATH=[{x:60,y:143},{x:163,y:143},{x:163,y:326},{x:372,y:326},{x:372,y:130},{x:596,y:130},{x:596,y:389},{x:778,y:389},{x:778,y:264},{x:858,y:264}];
   const SIDE_PATH=[{x:900,y:53},{x:800,y:53},{x:800,y:231},{x:778,y:231},{x:778,y:264},{x:858,y:264}];
@@ -36,7 +38,9 @@ const TOWERS={
     2:[{at:7.4,kind:'human',count:1}],
     3:[{at:6.6,kind:'route',count:2},{at:12.2,kind:'human',count:1}],
     4:[{at:7.0,kind:'route',count:3},{at:12.5,kind:'human',count:2}],
-    5:[{at:6.2,kind:'human',count:2},{at:10.5,kind:'route',count:4},{at:17.0,kind:'human',count:1}]
+    5:[{at:6.2,kind:'human',count:2},{at:10.5,kind:'route',count:4},{at:17.0,kind:'human',count:1}],
+    6:[{at:6.8,kind:'route',count:3},{at:12.4,kind:'human',count:2}],
+    7:[{at:6.4,kind:'human',count:2},{at:10.9,kind:'route',count:4},{at:16.2,kind:'human',count:2}]
   };
 
 const iconSVG={
