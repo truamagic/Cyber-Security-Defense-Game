@@ -12,8 +12,89 @@
   let game={},lastTime=0,toastTimer=null,raf=0,visualT=0,hoverPad=-1;
   let currentDrawer=null,drawerReturnFocus=null;
   let placement=null,hoverPreviewType=null; // pad/type are provisional until confirm; no SP spent yet.
+  const TUTORIAL_STEPS=[
+    {id:'pad',title:'設置地点を選ぼう',description:'マップ中央左側の「地点04」の＋を押してみましょう。空き地点を押すと、その場所に置く設備のショップが開きます。',tip:'マップの点滅する＋（地点04）をクリック／タップ。',target:'.map-pad-btn[data-pad="3"]'},
+    {id:'shop',title:'メールフィルターを選ぼう',description:'ショップの設備を比較します。練習ではメールフィルターを選択してください。まだSPは消費されません。',tip:'ショップ内の「メールフィルター」を選択。',target:'.shop-item[data-id="mail"]'},
+    {id:'preview',title:'射程を確認して設置を確定',description:'マップに表示された水色の円がゲーム内で対応できる範囲です。ルートを覆う位置か確認し、「設置確定」を押してください。',tip:'設置確定までSPは減りません。設備変更も可能です。',target:'#confirmPlacementBtn'},
+    {id:'tower',title:'設置したタワーを選択',description:'今設置した地点04のタワーをもう一度押してください。強化パネルが開き、現在のレベルと性能が確認できます。',tip:'マップ上の地点04を再びクリック／タップ。',target:'.map-pad-btn[data-pad="3"]'},
+    {id:'upgrade',title:'タワーをレベルアップ',description:'防御設備はSPを使ってLv.3まで強化できます。今回はメールフィルターをLv.2にしてください。',tip:'強化パネルにある「↑ 強化 85 SP」を押す。',target:'#detail .detail-actions .btn-primary'},
+    {id:'educationOpen',title:'職員教育のパネルを開く',description:'設備だけではなく、職員による気づきと報告も重要です。上部の「職員教育」ボタンを押しましょう。',tip:'上部メニューの「職員教育」を選択。',target:'#openEducationBtn'},
+    {id:'education',title:'職員教育を強化',description:'職員教育は人的リスク型の進行を遅くする全体強化です。今回はLv.1に上げて効果を確認しましょう。',tip:'「職員教育を強化 110 SP」を押す。',target:'#trainingBtn'},
+    {id:'waveReady',title:'短い練習ウェーブを開始',description:'配置・強化が終わりました。ウェーブを開始すると敵が自動で移動し、タワーが射程内の敵に対応します。',tip:'「▶ ウェーブ1開始」を押す。',target:'#startBtn'},
+    {id:'waveActive',title:'防御の動きを観察しよう',description:'敵が水色のルートを進みます。タワーの光、敵のHP、診療継続度と情報保護度を見てみましょう。完了すると結果が表示されます。',tip:'観察中です。必要なら一時停止や2倍速を使えます。',target:'.wave-track'},
+    {id:'complete',title:'チュートリアル完了！',description:'設置地点の選択・射程プレビュー・購入・設備強化・職員教育・ウェーブ開始を体験しました。通常モードでは5ウェーブに挑戦できます。',tip:'「通常プレイへ」ボタンでゲームを初期状態に戻します。',target:'#tutorialExitBtn'}
+  ];
+  const TUTORIAL_PAD=3;
+  let tutorial=null;
+  function isGuided(step){return !!(tutorial?.active && tutorial.step===step)}
+  function tutorialPermit(action,detail){
+    if(!tutorial?.active)return true;
+    const allow={pad:action==='pad'&&detail===TUTORIAL_PAD,shop:action==='towerType'&&detail==='mail',preview:action==='confirm',tower:action==='pad'&&detail===TUTORIAL_PAD,upgrade:action==='towerUpgrade'&&detail===TUTORIAL_PAD,educationOpen:action==='openEducation',education:action==='training',waveReady:action==='wave',waveActive:action==='speed'||action==='pause',complete:false};
+    if(allow[tutorial.step])return true;
+    toast('操作練習：点滅している場所を操作してください');
+    return false;
+  }
+  function tutorialSetStep(step){
+    if(!tutorial?.active)return;
+    tutorial.step=step;
+    tutorialRender();
+    const target=document.querySelector(TUTORIAL_STEPS.find(s=>s.id===step)?.target||'#__none__');
+    if(target && !currentDrawer && ['waveReady','educationOpen'].includes(step))target.scrollIntoView({block:'nearest',behavior:'smooth'});
+  }
+  function tutorialRender(){
+    const active=!!tutorial?.active,el=$('tutorialPanel');
+    el.hidden=!active;
+    document.body.classList.toggle('tutorial-active',active);
+    document.querySelectorAll('.tutorial-highlight').forEach(node=>node.classList.remove('tutorial-highlight'));
+    if(!active){$('tutorialBtn').textContent='🎓 チュートリアル';$('tutorialBtn').disabled=false;return}
+    const idx=TUTORIAL_STEPS.findIndex(s=>s.id===tutorial.step),step=TUTORIAL_STEPS[Math.max(0,idx)];
+    const count=Math.min(idx+1,9);
+    $('tutorialCounter').textContent=idx===9?'COMPLETE':`STEP ${count} / 9`;
+    $('tutorialTitle').textContent=step.title;
+    $('tutorialDescription').textContent=step.description;
+    $('tutorialTip').textContent=step.tip;
+    $('tutorialProgress').style.width=`${(idx===9?9:idx)/9*100}%`;
+    $('tutorialProgressTrack').setAttribute('aria-valuenow',String(idx===9?9:idx));
+    $('tutorialExitBtn').textContent=idx===9?'✓ 通常プレイへ':'✕ 終了';
+    $('tutorialBtn').textContent='🎓 練習中';$('tutorialBtn').disabled=true;
+    const target=document.querySelector(step.target);
+    if(target && !target.closest('[hidden]'))target.classList.add('tutorial-highlight');
+  }
+  function startTutorial(){
+    tutorial=null;resetGame();
+    tutorial={active:true,step:'pad'};
+    addLog('初心者向けの操作練習を開始しました。練習中のSPやスコアは通常プレイへ引き継ぎません。');
+    tutorialRender();
+    $('tutorialPanel').scrollIntoView({block:'nearest',behavior:'smooth'});
+  }
+  function exitTutorial(){tutorial=null;resetGame();tutorialRender();$('tutorialBtn').focus({preventScroll:true})}
+  function requestTutorialStart(){
+    if(tutorial?.active)return;
+    const hasProgress=game.wave>0||game.towers.some(Boolean)||game.trainingLevel>0;
+    if(!hasProgress){startTutorial();return}
+    const wasPlaying=game.phase==='active'&&!game.paused;
+    if(wasPlaying){game.paused=true;refreshUI()}
+    openModal('チュートリアルを始めますか？',
+      '<p>現在のプレイ状況はリセットされます。練習終了時には、通常ゲームを最初から始められます。</p>',
+      [{label:'リセットして練習する',primary:true,action:startTutorial},
+       {label:'今のゲームを続ける',action:()=>{if(wasPlaying){game.paused=false;refreshUI()}}}]);
+    $('modalBackdrop').dataset.restorePause=wasPlaying?'1':'0';
+  }
+  function askExitTutorial(){
+    if(!tutorial?.active)return;
+    if(isGuided('complete')){exitTutorial();return}
+    openModal('チュートリアルを終了しますか？','<p>練習で設置した設備やSPの変化は破棄し、通常のゲームを最初から始められる状態に戻します。</p>',[
+      {label:'終了して通常プレイへ',primary:true,action:exitTutorial},
+      {label:'練習を続ける',action:()=>{}}
+    ]);
+  }
+
   function openDrawer(panel){
     if(!PANEL_CONFIG[panel]||$('modalBackdrop').classList.contains('open'))return;
+    if(tutorial?.active){
+      const allowed=(panel==='shop'&&['shop','preview'].includes(tutorial.step))||(panel==='upgrade'&&['tower','upgrade'].includes(tutorial.step))||(panel==='education'&&['educationOpen','education'].includes(tutorial.step))||tutorial.step==='waveActive';
+      if(!allowed){toast('操作練習：現在の手順を先に完了してください');return}
+    }
     if(placement && panel!=='shop')cancelPlacement({quiet:true});
     if(currentDrawer===panel){if(panel==='shop'&&placement&&!placement.type)cancelPlacement({quiet:true});closeDrawer();return}
     if(!currentDrawer)drawerReturnFocus=document.activeElement;
@@ -28,6 +109,8 @@
     $('drawerBackdrop').classList.add('open');
     document.body.classList.add('drawer-open');
     $('closeDrawerBtn').focus({preventScroll:true});
+    if(isGuided('educationOpen') && panel==='education')tutorialSetStep('education');
+    else tutorialRender();
   }
   function closeDrawer({restoreFocus=true}={}){
     if(!currentDrawer)return;
@@ -40,6 +123,7 @@
     $('controlDrawer').inert=true;
     document.body.classList.remove('drawer-open');
     drawerReturnFocus=null;
+    tutorialRender();
   }
   function trapDrawerFocus(e){
     if(e.key!=='Tab'||!currentDrawer)return;
@@ -72,20 +156,24 @@
   }
   function beginPlacement(i){
     if(['won','lost'].includes(game.phase)||game.towers[i])return;
+    if(tutorial?.active && !tutorialPermit('pad',i))return;
     if(!placement)placement={pad:i,type:null,autoResume:holdForPlacement()};
     else placement.pad=i;
     game.selectedPad=i;
     hoverPreviewType=null;
+    if(isGuided('pad'))tutorialSetStep('shop');
     refreshUI();
     if(!placement.type){openDrawer('shop')}
     else{closeDrawer({restoreFocus:false})}
   }
   function choosePlacementType(id){
     if(!TOWERS[id]||['won','lost'].includes(game.phase))return;
+    if(tutorial?.active && !tutorialPermit('towerType',id))return;
     if(!placement)placement={pad:-1,type:id,autoResume:holdForPlacement()};
     else placement.type=id;
     game.selectedType=id;
     hoverPreviewType=null;
+    if(isGuided('shop'))tutorialSetStep('preview');
     refreshUI();
     closeDrawer({restoreFocus:false});
     // Focus an enabled control after the shop closes; disabled confirms
@@ -100,12 +188,14 @@
     if(!placement)return;
     const resume=placement.autoResume;
     placement=null;hoverPreviewType=null;game.selectedPad=-1;
+    if(tutorial?.active&&['shop','preview'].includes(tutorial.step))tutorialSetStep('pad');
     if(resume&&game.phase==='active')game.paused=false;
     refreshUI();
     if(!quiet)toast('仮配置をキャンセルしました（SPは消費していません）');
   }
   function confirmPlacement(){
     if(!placement||placement.pad<0||!placement.type||['won','lost'].includes(game.phase))return;
+    if(tutorial?.active&&!tutorialPermit('confirm'))return;
     const {pad,type,autoResume}=placement,base=TOWERS[type];
     if(game.towers[pad]){toast('その地点には既に設備があります');return}
     if(game.sp<base.cost){toast('SPが不足しています。別の設備を選んでください。');return}
@@ -113,6 +203,7 @@
     game.sp-=base.cost;
     game.towers[pad]={type,level:1,cooldown:.2,invested:base.cost};
     placement=null;hoverPreviewType=null;game.selectedPad=pad;
+    if(isGuided('preview'))tutorialSetStep('tower');
     if(autoResume&&game.phase==='active')game.paused=false;
     addLog(`地点 ${pad+1} に${base.name}を設置（-${base.cost} SP）`);
     toast(`${base.short}を地点 ${pad+1} に設置しました`);
@@ -131,7 +222,9 @@
   }
   function pressPad(i){
     if(game.phase==='won'||game.phase==='lost')return;
+    if(tutorial?.active && !tutorialPermit('pad',i))return;
     if(game.towers[i]){
+      if(isGuided('tower'))tutorialSetStep('upgrade');
       if(placement)cancelPlacement({quiet:true});
       game.selectedPad=i;renderDetail();renderQuickTower();renderMobilePads();syncPadButtons();openDrawer('upgrade');
     }else beginPlacement(i);
@@ -143,7 +236,7 @@
     const base=TOWERS[t.type],next=base.upgrade[t.level-1];name.textContent=`地点 ${pad+1}｜${base.short} Lv.${t.level}/3`;desc.textContent=t.level===3?'最大強化済み':`次の強化：${next} SP`;
     const btn=document.createElement('button');btn.type='button';btn.className='btn btn-primary quick-upgrade-btn';btn.textContent='強化・管理';btn.addEventListener('click',()=>openDrawer('upgrade'));el.append(btn)}
   function renderTraining(){const lv=game.trainingLevel,cost=TRAINING_COSTS[lv],reduction=Math.round((1-TRAINING_SPEED[lv])*100);$('trainingLevel').textContent=`職員教育 Lv.${lv} / 3`;$('trainingDesc').textContent=lv===0?'未実施：人的リスク型は通常速度で侵攻。研修で早期発見・報告を促す。':`人的リスク型の侵攻速度 −${reduction}%。研修による早期発見・報告をゲーム内の遅延効果として表現。`;[...$('trainingBars').children].forEach((b,i)=>b.classList.toggle('done',i<lv));const btn=$('trainingBtn');btn.textContent=lv===3?'✓ 教育体制 MAX':`職員教育を強化　${cost} SP`;btn.disabled=lv===3||game.sp<cost||['won','lost'].includes(game.phase)}
-  function upgradeTraining(){const lv=game.trainingLevel,cost=TRAINING_COSTS[lv];if(lv>=3||game.sp<cost||['won','lost'].includes(game.phase))return;game.sp-=cost;game.trainingLevel++;addLog(`職員教育をLv.${game.trainingLevel}に強化（-${cost} SP）`);toast(`教育 Lv.${game.trainingLevel}：人的リスク型の侵攻が減速`);refreshUI()}
+  function upgradeTraining(){if(tutorial?.active&&!tutorialPermit('training'))return;const lv=game.trainingLevel,cost=TRAINING_COSTS[lv];if(lv>=3||game.sp<cost||['won','lost'].includes(game.phase))return;game.sp-=cost;game.trainingLevel++;addLog(`職員教育をLv.${game.trainingLevel}に強化（-${cost} SP）`);toast(`教育 Lv.${game.trainingLevel}：人的リスク型の侵攻が減速`);if(isGuided('education')){closeDrawer({restoreFocus:false});tutorialSetStep('waveReady')}refreshUI()}
   function renderMobilePads(){const el=$('mobilePads');el.textContent='';for(let i=0;i<PADS.length;i++){const t=game.towers[i],btn=document.createElement('button');btn.type='button';btn.className='slot-btn'+(t?' occupied':'')+(game.selectedPad===i?' selected':'');btn.setAttribute('aria-label',`配置場所 ${i+1}：${t?TOWERS[t.type].name:'空き'}`);btn.innerHTML=`<strong>${String(i+1).padStart(2,'0')}</strong><small>${t?TOWERS[t.type].short:'＋ 空き'}</small>`;btn.addEventListener('click',()=>pressPad(i));el.append(btn)}}
   function renderShop(){
     const el=$('shop');el.innerHTML='';
@@ -191,18 +284,18 @@
     $('waveLabel').textContent=active?`進行中：${current.title}`:game.phase==='intermission'&&upcoming?`次：${upcoming.title}`:game.phase==='won'?'全ウェーブ防衛完了':game.phase==='lost'?'病院の防衛機能が停止':upcoming?`次：${upcoming.title}`:'最終結果';
     $('waveCounter').textContent=active?`${game.spawned} / ${game.spawnTotal} 出現・残 ${game.enemies.length}`:game.phase==='intermission'?`${game.wave} / 5 クリア`:game.phase==='won'?'5 / 5':game.phase==='lost'?`${game.wave} / 5`:'0 / 5';
     $('waveProgress').style.width=(active&&game.spawnTotal?game.spawned/game.spawnTotal*100:game.phase==='won'?100:0)+'%';
-    renderShop();renderDetail();renderMobilePads();renderQuickTower();renderTraining();syncPadButtons();renderPlacementBar();
+    renderShop();renderDetail();renderMobilePads();renderQuickTower();renderTraining();syncPadButtons();renderPlacementBar();tutorialRender();
   }
-  function upgradeTower(i){const t=game.towers[i];if(!t||t.level>=MAX_LEVEL)return;const cost=TOWERS[t.type].upgrade[t.level-1];if(game.sp<cost){toast('SPが足りません');return}game.sp-=cost;t.invested+=cost;t.level++;addLog(`${TOWERS[t.type].short}を Lv.${t.level} に強化（-${cost} SP）`);refreshUI()}
-  function sellTower(i){const t=game.towers[i];if(!t)return;const amount=Math.round(t.invested*.65);game.sp+=amount;addLog(`${TOWERS[t.type].name}を売却（+${amount} SP）`);game.towers[i]=null;game.selectedPad=-1;refreshUI()}
-  function startWave(){if(placement)return;if(game.phase!=='ready'&&game.phase!=='intermission')return;if(game.wave>=WAVE_DEFS.length)return;game.wave++;const wave=WAVE_DEFS[game.wave-1];game.phase='active';game.queue=wave.units.slice();game.spawned=0;game.waveEvents=(EVENT_PLANS[game.wave]||[]).map(e=>({...e,at:e.at+(Math.random()-.5)*1.5,fired:false}));game.spawnTotal=game.queue.length+game.waveEvents.reduce((sum,e)=>sum+e.count,0);game.spawnIndex=0;game.spawnTimer=.12;game.time=0;game.paused=false;game.bcpUsed=false;addLog(`WAVE ${game.wave}：${wave.title} が始まりました。`,'warn');toast(`${wave.title}：${wave.subtitle}`);refreshUI()}
+  function upgradeTower(i){if(tutorial?.active&&!tutorialPermit('towerUpgrade',i))return;const t=game.towers[i];if(!t||t.level>=MAX_LEVEL)return;const cost=TOWERS[t.type].upgrade[t.level-1];if(game.sp<cost){toast('SPが足りません');return}game.sp-=cost;t.invested+=cost;t.level++;addLog(`${TOWERS[t.type].short}を Lv.${t.level} に強化（-${cost} SP）`);if(isGuided('upgrade')){closeDrawer({restoreFocus:false});tutorialSetStep('educationOpen')}refreshUI()}
+  function sellTower(i){if(tutorial?.active){toast('操作練習では売却せずに進めてください');return}const t=game.towers[i];if(!t)return;const amount=Math.round(t.invested*.65);game.sp+=amount;addLog(`${TOWERS[t.type].name}を売却（+${amount} SP）`);game.towers[i]=null;game.selectedPad=-1;refreshUI()}
+  function startWave(){if(tutorial?.active&&!tutorialPermit('wave'))return;if(placement)return;if(game.phase!=='ready'&&game.phase!=='intermission')return;if(game.wave>=WAVE_DEFS.length)return;game.wave++;const wave=WAVE_DEFS[game.wave-1];game.phase='active';game.queue=(isGuided('waveReady')?['phish','phish','auth','phish']:wave.units.slice());game.spawned=0;game.waveEvents=(tutorial?.active?[]:(EVENT_PLANS[game.wave]||[]).map(e=>({...e,at:e.at+(Math.random()-.5)*1.5,fired:false})));game.spawnTotal=game.queue.length+game.waveEvents.reduce((sum,e)=>sum+e.count,0);game.spawnIndex=0;game.spawnTimer=.12;game.time=0;game.paused=false;game.bcpUsed=false;if(isGuided('waveReady'))tutorialSetStep('waveActive');addLog(`WAVE ${game.wave}：${tutorial?.active?'練習ウェーブ':wave.title} が始まりました。`,'warn');toast(`${wave.title}：${wave.subtitle}`);refreshUI()}
   function spawnEnemy(kind,route='main',startFraction=0){const e=ENEMIES[kind],w=WAVE_DEFS[game.wave-1],routeLen=route==='side'?SECONDARY.total:PRIMARY.total,health=Math.round(e.hp*w.hpMult);game.enemies.push({kind,route,distance:routeLen*startFraction,hp:health,maxHp:health,slowLeft:0,flash:0,uid:Math.random()});game.spawned++}
   function fireEvent(e){e.fired=true;
     if(e.kind==='route'){game.sideRouteOpen=true;for(let j=0;j<e.count;j++)spawnEnemy(j%3===0?'malware':'auth','side',j*.05);game.notice=`新たな侵入ルート発生！ 別ルートから ${e.count} 件`;addLog(`新規経路が出現：別ルートから${e.count}件が接近`,'danger');}
     else{for(let j=0;j<e.count;j++)spawnEnemy('insider','main',.62+Math.min(j*.025,.08));game.notice=`人的リスク発生！ 内部付近に ${e.count} 件`;addLog(`手順逸脱を想定したイベント：内部で${e.count}件のリスク`,'warn');}
     game.noticeLeft=4.2;toast(game.notice);refreshUI()}
 
-  function activateBCP(){if(game.phase==='won'||game.phase==='lost'||game.bcpUsed||game.integrity>=100||game.sp<BCP_COST)return;game.sp-=BCP_COST;game.integrity=Math.min(100,game.integrity+BCP_HEAL);game.bcpUsed=true;addLog('BCP：代替運用で診療継続度を一部回復（-130 SP）');toast('BCPを発動：診療継続度を一部回復');refreshUI()}
+  function activateBCP(){if(tutorial?.active){toast('BCPは通常モードで試せます');return}if(game.phase==='won'||game.phase==='lost'||game.bcpUsed||game.integrity>=100||game.sp<BCP_COST)return;game.sp-=BCP_COST;game.integrity=Math.min(100,game.integrity+BCP_HEAL);game.bcpUsed=true;addLog('BCP：代替運用で診療継続度を一部回復（-130 SP）');toast('BCPを発動：診療継続度を一部回復');refreshUI()}
   function update(dt){visualT+=dt;for(const effect of game.effects)effect.life-=dt;game.effects=game.effects.filter(e=>e.life>0);if(game.phase!=='active'||game.paused)return;
     const delta=Math.min(.065,dt)*game.speed;game.time+=delta;game.spawnTimer-=delta;game.noticeLeft=Math.max(0,game.noticeLeft-delta);
     const wave=WAVE_DEFS[game.wave-1];
@@ -214,7 +307,7 @@
         const impact=s.damage*(base.vs[target.kind]||1)*(special?1+lv*.22:1);target.hp-=impact;target.flash=.14;if(base.slow)target.slowLeft=Math.max(target.slowLeft,base.slow+lv*.48);game.effects.push({type:'beam',from:{x:pad.x,y:pad.y},to:ep,color:base.color,life:.16,max:.16});if(target.hp<=0){game.enemies.splice(game.enemies.indexOf(target),1);const targetInfo=ENEMIES[target.kind];game.sp+=targetInfo.reward;game.score+=targetInfo.reward*10;game.kills++;if(game.selectedPad>=0){renderDetail();renderQuickTower()}renderTraining();$('bcpBtn').disabled=game.bcpUsed||game.integrity>=100||game.sp<BCP_COST;game.effects.push({type:'burst',x:ep.x,y:ep.y,color:targetInfo.color,life:.47,max:.47});}}
       else tower.cooldown=0;
     }
-    if(game.spawnIndex>=game.queue.length&&game.waveEvents.every(e=>e.fired)&&game.enemies.length===0){game.sp+=wave.bonus;game.score+=Math.round((game.integrity+game.privacy)*6);addLog(`WAVE ${game.wave} 突破！ ボーナス +${wave.bonus} SP`);if(game.wave===WAVE_DEFS.length)finish(true);else{game.phase='intermission';toast(`WAVE ${game.wave} クリア！ +${wave.bonus} SP：設備を強化して次へ`)}refreshUI()}
+    if(game.spawnIndex>=game.queue.length&&game.waveEvents.every(e=>e.fired)&&game.enemies.length===0){game.sp+=wave.bonus;game.score+=Math.round((game.integrity+game.privacy)*6);addLog(`WAVE ${game.wave} 突破！ ボーナス +${wave.bonus} SP`);if(isGuided('waveActive')){game.phase='intermission';tutorialSetStep('complete');toast('操作練習を修了しました！ 通常プレイへ進めます。')}else if(game.wave===WAVE_DEFS.length)finish(true);else{game.phase='intermission';toast(`WAVE ${game.wave} クリア！ +${wave.bonus} SP：設備を強化して次へ`)}refreshUI()}
   }
   function finish(success){game.phase=success?'won':'lost';game.paused=false;if(success){game.score+=Math.round(game.integrity*15+game.privacy*15);addLog('最終ウェーブ突破！病院の防衛成功。')}else addLog('診療継続度または情報保護度が0になりました。','danger');refreshUI();showResult(success)}
   function fitCanvas(){if(!ctx)return;const rect=canvas.getBoundingClientRect();if(!rect.width)return;const ratio=Math.min(2.5,window.devicePixelRatio||1);canvas.width=Math.round(rect.width*ratio);canvas.height=Math.round(rect.width*H/W*ratio);ctx.setTransform(canvas.width/W,0,0,canvas.height/H,0,0)}
@@ -312,7 +405,10 @@
     $('modalBackdrop').dataset.restorePause=wasActive?'1':'0';}
   function showResult(win){const grade=win?(game.integrity>=85&&game.privacy>=85?'S':game.integrity>=60&&game.privacy>=60?'A':'B'):'—';$('modalIcon').textContent=win?'★':'!';$('modalIcon').style.color=win?'var(--teal)':'var(--red)';const body=`<p>${win?'全5ウェーブを防衛しました。設備の組み合わせと投資判断が成果につながりました。':'診療継続度または情報保護度が0になりました。防衛設備の配置や強化順を見直しましょう。'}</p><div class="result-grid"><div><small>総合評価</small><strong>${grade}</strong></div><div><small>防衛スコア</small><strong>${money(game.score)}</strong></div><div><small>撃退数</small><strong>${game.kills}</strong></div><div><small>診療継続</small><strong>${Math.round(game.integrity)}%</strong></div><div><small>情報保護</small><strong>${Math.round(game.privacy)}%</strong></div><div><small>侵入数</small><strong>${game.leaks}</strong></div></div><p style="font-size:11px">ふりかえり：どの脅威に対して防御が不足したか、限られたSPをどう配分すべきだったか考えてみましょう。</p>`;
     openModal(win?'防衛成功！ ミッション完了':'防衛失敗 — 再挑戦しよう',body,[{label:'もう一度プレイ',primary:true,action:resetGame},{label:'結果を確認',action:()=>{}}],true)}
-  function doRestart(){if(placement)cancelPlacement({quiet:true});closeDrawer({restoreFocus:false});if(game.phase==='ready'&&game.towers.every(t=>!t)){resetGame();return}const resume=game.phase==='active'&&!game.paused;if(resume){game.paused=true;refreshUI()}openModal('ゲームを最初からやり直しますか？','<p>配置した設備、ポイント、スコア、進行状況はすべて初期化されます。</p>',[{label:'初期化する',primary:true,action:resetGame},{label:'キャンセル',action:()=>{if(resume){game.paused=false;refreshUI()}}}]);$('modalBackdrop').dataset.restorePause=resume?'1':'0'}
+  function doRestart(){if(tutorial?.active){startTutorial();return}if(placement)cancelPlacement({quiet:true});closeDrawer({restoreFocus:false});if(game.phase==='ready'&&game.towers.every(t=>!t)){resetGame();return}const resume=game.phase==='active'&&!game.paused;if(resume){game.paused=true;refreshUI()}openModal('ゲームを最初からやり直しますか？','<p>配置した設備、ポイント、スコア、進行状況はすべて初期化されます。</p>',[{label:'初期化する',primary:true,action:resetGame},{label:'キャンセル',action:()=>{if(resume){game.paused=false;refreshUI()}}}]);$('modalBackdrop').dataset.restorePause=resume?'1':'0'}
+  $('tutorialBtn').addEventListener('click',requestTutorialStart);
+  $('tutorialRestartBtn').addEventListener('click',startTutorial);
+  $('tutorialExitBtn').addEventListener('click',askExitTutorial);
   document.querySelectorAll('[data-panel]').forEach(btn=>btn.addEventListener('click',()=>openDrawer(btn.dataset.panel)));
   $('closeDrawerBtn').addEventListener('click',()=>{if(placement&&!placement.type)cancelPlacement({quiet:true});closeDrawer()});
   $('drawerBackdrop').addEventListener('click',()=>{if(placement&&!placement.type)cancelPlacement({quiet:true});closeDrawer()});
@@ -323,8 +419,8 @@
   $('cancelPlacementBtn').addEventListener('click',()=>cancelPlacement());
   $('trainingBtn').addEventListener('click',upgradeTraining);
   $('startBtn').addEventListener('click',startWave);
-  $('pauseBtn').addEventListener('click',()=>{if(game.phase!=='active')return;game.paused=!game.paused;refreshUI()});
-  $('speedBtn').addEventListener('click',()=>{game.speed=game.speed===1?2:1;refreshUI();toast(game.speed===1?'通常速度に変更':'2倍速に変更')});
+  $('pauseBtn').addEventListener('click',()=>{if(tutorial?.active&&!tutorialPermit('pause'))return;if(game.phase!=='active')return;game.paused=!game.paused;refreshUI()});
+  $('speedBtn').addEventListener('click',()=>{if(tutorial?.active&&!tutorialPermit('speed'))return;game.speed=game.speed===1?2:1;refreshUI();toast(game.speed===1?'通常速度に変更':'2倍速に変更')});
   $('bcpBtn').addEventListener('click',activateBCP);
   $('helpBtn').addEventListener('click',showHelp);
   $('restartBtn').addEventListener('click',doRestart);

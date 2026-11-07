@@ -1,0 +1,23 @@
+/* HOSPITAL DEFENSE v3.3 — beginner guided practice */
+.btn-tutorial{border-color:#388e83;background:#14483f;color:#d1fff1;font-weight:850}
+.btn-tutorial:hover{background:#20695c!important}
+.tutorial-panel[hidden]{display:none!important}
+.tutorial-panel{margin:0;padding:16px 18px 13px;background:linear-gradient(117deg,#102d3d,#103642 65%,#122f3a);border-bottom:1px solid #388c8b;color:#e7f9f8;display:grid;gap:8px}
+.tutorial-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tutorial-chip{font-size:10px;letter-spacing:.12em;color:#81e6d5;font-weight:900}
+.tutorial-counter{font-size:11px;font-weight:900;color:#f4d08a;white-space:nowrap}
+.tutorial-content{display:flex;gap:15px;justify-content:space-between;align-items:center}
+.tutorial-copy{flex:1;min-width:0}
+.tutorial-copy h2{font-size:17px;line-height:1.45;margin:0 0 5px;font-weight:850;color:#d8fff4}
+.tutorial-copy p{font-size:12px;line-height:1.75;color:#b9d5df;margin:0}
+.tutorial-actions{display:flex;gap:7px;flex-shrink:0}
+.tutorial-actions .btn{font-size:11px;padding:8px 12px}
+.tutorial-progress{height:5px;border-radius:9px;background:#274657;overflow:hidden}
+.tutorial-progress i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#38bdac,#9cfae1);transition:width .28s ease}
+.tutorial-tip{font-size:11px;font-weight:700;color:#f6dba1;margin:0}
+.tutorial-active .tutorial-highlight:not(.map-pad-btn){outline:3px solid #70f6d4!important;outline-offset:2px;box-shadow:0 0 0 6px #26c8b635,0 0 26px #37e6c072!important;position:relative;z-index:2;animation:tutorialPulse 1.5s ease-in-out infinite}
+.tutorial-active .map-pad-btn.tutorial-highlight{background:#5af1cc33!important;border:3px solid #b1ffe8!important;box-shadow:0 0 0 8px #5fe9ce36,0 0 28px #62f9dd!important;animation:tutorialPulse 1.5s ease-in-out infinite;z-index:5}
+.tutorial-active .drawer-view .tutorial-highlight{z-index:1}
+@keyframes tutorialPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.24)}}
+@media(max-width:690px){.tutorial-panel{padding:12px 11px;gap:8px}.tutorial-copy h2{font-size:14px}.tutorial-copy p{font-size:11px}.tutorial-content{align-items:stretch;flex-direction:column;gap:9px}.tutorial-actions{justify-content:flex-end}.tutorial-actions .btn{min-height:38px}.tutorial-tip{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.tutorial-active .tutorial-highlight{animation:none!important}.tutorial-progress i{transition:none}}

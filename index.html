@@ -8,14 +8,16 @@
   <title>HOSPITAL DEFENSE | サイバー防衛タワーディフェンス</title>
   <link rel="stylesheet" href="./css/styles.css">
   <link rel="stylesheet" href="./css/drawer.css">
+  <link rel="stylesheet" href="./css/tutorial.css">
 </head>
 <body>
 <div class="shell">
   <header class="header">
     <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="#b4fff0" stroke-width="2.2" stroke-linejoin="round"><path d="M16 2 28 7v9c0 8.5-6 12.5-12 14C10 28.5 4 24.5 4 16V7z"/><path d="M16 8v15M9 15.5h14" stroke-width="3"/></svg></div>
-    <div class="brand-copy"><div class="eyebrow">CYBERSECURITY TOWER DEFENSE</div><h1>HOSPITAL <span>DEFENSE</span> <span class="version">B / STANDARD 3.2</span></h1></div>
+    <div class="brand-copy"><div class="eyebrow">CYBERSECURITY TOWER DEFENSE</div><h1>HOSPITAL <span>DEFENSE</span> <span class="version">B / STANDARD 3.3</span></h1></div>
     <div class="header-right">
       <span class="header-note"><span class="live-dot"></span> OFFLINE MODE / 通信なし</span>
+      <button class="btn btn-tutorial" id="tutorialBtn" type="button">🎓 チュートリアル</button>
       <button class="btn" id="helpBtn" type="button">？ 遊び方</button>
       <button class="btn" id="restartBtn" type="button">↻ 最初から</button>
     </div>
@@ -47,6 +49,13 @@
         </div>
         <div class="quick-tower" id="quickTower" aria-label="選択中の設備"></div>
       </div>
+      <section class="tutorial-panel" id="tutorialPanel" aria-label="チュートリアルの進行" aria-live="polite" hidden>
+        <div class="tutorial-head"><span class="tutorial-chip">GUIDED PRACTICE / 操作練習</span><span id="tutorialCounter" class="tutorial-counter">STEP 1 / 9</span></div>
+        <div class="tutorial-content"><div class="tutorial-copy"><h2 id="tutorialTitle">最初の設置地点を選ぶ</h2><p id="tutorialDescription">案内に沿って実際に操作してください。</p></div>
+          <div class="tutorial-actions"><button type="button" class="btn" id="tutorialRestartBtn">↻ やり直す</button><button type="button" class="btn" id="tutorialExitBtn">✕ 終了</button></div></div>
+        <div class="tutorial-progress" role="progressbar" id="tutorialProgressTrack" aria-label="チュートリアル進捗" aria-valuemin="0" aria-valuemax="9" aria-valuenow="0"><i id="tutorialProgress"></i></div>
+        <p class="tutorial-tip" id="tutorialTip">青緑色に点滅している場所を押してください。</p>
+      </section>
       <div class="map-wrap"><canvas id="board" width="960" height="560" tabindex="0" aria-label="防衛マップ。設置地点の丸を直接タップして設備を設置・選択できます。">このブラウザはCanvasをサポートしていません。</canvas><div class="pad-hit-layer" id="padHitLayer" aria-label="マップ上の設置地点"></div><div class="canvas-badge">● 空き地点 → 設備選択 → 射程確認 → 設置確定</div><div class="map-status" id="mapMessage">WAVE 1 / STANDBY</div>
         <section class="placement-bar" id="placementBar" aria-label="仮配置の確認" aria-live="polite" hidden>
           <div class="placement-summary"><span class="placement-step">PLACEMENT PREVIEW / 仮配置中</span><strong id="placementTitle">設置位置を選択してください</strong><span id="placementInfo">設備と射程を確認してから設置できます。</span></div>
