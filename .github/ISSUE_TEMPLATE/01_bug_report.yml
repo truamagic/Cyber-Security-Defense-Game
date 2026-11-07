@@ -1,0 +1,55 @@
+
+name: "不具合を報告する"
+description: "ゲームで発生した問題を報告します"
+title: "[Bug] "
+labels: ["bug"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ご報告ありがとうございます。
+        この内容は公開されます。
+        氏名、患者情報、パスワード、
+        実在する病院の内部情報は入力しないでください。
+
+  - type: input
+    id: version
+    attributes:
+      label: "ゲームのバージョン"
+      placeholder: "例：v0.1.0"
+
+  - type: dropdown
+    id: device
+    attributes:
+      label: "利用端末"
+      options:
+        - "Android"
+        - "iPhone / iPad"
+        - "Windows"
+        - "Mac"
+        - "その他"
+
+  - type: input
+    id: browser
+    attributes:
+      label: "使用ブラウザ"
+      placeholder: "例：Chrome"
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: "発生した問題"
+      placeholder: "どのような問題が発生しましたか？"
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: "問題が発生するまでの操作"
+      placeholder: |
+        1. ゲームを起動
+        2. 難易度を選択
+        3. 〇〇を押す
+        4. 問題が発生
