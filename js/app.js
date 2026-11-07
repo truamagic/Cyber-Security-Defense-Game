@@ -233,12 +233,14 @@
     ctx.setLineDash([5,11]);ctx.lineDashOffset=-visualT*20;ctx.strokeStyle='#83bac980';ctx.lineWidth=2.6;ctx.stroke();ctx.setLineDash([]);ctx.restore();
     // Direction marks.
     for(let d=75;d<TOTAL_PATH-70;d+=115){const p=posAt(d),p2=posAt(d+9),angle=Math.atan2(p2.y-p.y,p2.x-p.x);ctx.save();ctx.translate(p.x,p.y);ctx.rotate(angle);ctx.beginPath();ctx.moveTo(-5,-5);ctx.lineTo(1,0);ctx.lineTo(-5,5);ctx.strokeStyle='#76bdc6a3';ctx.lineWidth=1.8;ctx.stroke();ctx.restore()}
-    disc(15,143,28,'#5d263d80','#ff7b96',2);disc(15,143,19,'#a63b55b8');text('!',15,142,'#fff',20,'center',900);text('外部',28,194,'#e4a2b0',11,'left',800);
-    roundRect(859,212,88,104,11,'#1b374e','#ffd487',2);roundRect(870,227,66,68,5,'#284e60','#9bc9c6',1);for(let k=0;k<3;k++){roundRect(879,237+k*16,49,9,2,'#0f3347','#6ba9ab',.7);disc(920,241+k*16,2.5,'#4bdcc0')}
-    text('病院システム',903,204,'#ffdd9e',12,'center',750);text('保護対象',903,328,'#8daeba',11,'center',650);
+    // Keep the visible entry and protected goal aligned to the actual route endpoints.
+    const entry=PATH[0],goal=PATH[PATH.length-1];
+    disc(entry.x,entry.y,28,'#5d263d80','#ff7b96',2);disc(entry.x,entry.y,19,'#a63b55b8');text('!',entry.x,entry.y-1,'#fff',20,'center',900);text('外部侵入口',entry.x,entry.y+51,'#e4a2b0',11,'center',800);
+    roundRect(goal.x-44,goal.y-52,88,104,11,'#1b374e','#ffd487',2);roundRect(goal.x-33,goal.y-37,66,68,5,'#284e60','#9bc9c6',1);for(let k=0;k<3;k++){roundRect(goal.x-24,goal.y-27+k*16,49,9,2,'#0f3347','#6ba9ab',.7);disc(goal.x+17,goal.y-23+k*16,2.5,'#4bdcc0')}
+    text('病院システム',goal.x,goal.y-60,'#ffdd9e',12,'center',750);text('保護対象',goal.x,goal.y+64,'#8daeba',11,'center',650);
   }
   function drawSideRoute(){if(!game.sideRouteOpen)return;ctx.save();ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();ctx.moveTo(SIDE_PATH[0].x,SIDE_PATH[0].y);for(let i=1;i<SIDE_PATH.length;i++)ctx.lineTo(SIDE_PATH[i].x,SIDE_PATH[i].y);ctx.strokeStyle='#46203b';ctx.lineWidth=34;ctx.stroke();ctx.strokeStyle='#9d4162';ctx.lineWidth=27;ctx.stroke();ctx.strokeStyle='#291c3a';ctx.lineWidth=21;ctx.stroke();ctx.setLineDash([6,10]);ctx.lineDashOffset=visualT*20;ctx.strokeStyle='#ffb3bd';ctx.lineWidth=3;ctx.stroke();ctx.setLineDash([]);ctx.restore();
-    roundRect(815,16,129,25,7,'#58283dcc','#ef839b',1.3);text('⚠ 新侵入ルート',879,29,'#ffdbe3',11,'center',800);}
+    const entry=SIDE_PATH[0];roundRect(entry.x-125,entry.y-37,129,25,7,'#58283dcc','#ef839b',1.3);text('⚠ 新侵入ルート',entry.x-61,entry.y-24,'#ffdbe3',11,'center',800);}
   function drawPadIcon(type,x,y,color){ctx.save();ctx.translate(x,y);ctx.strokeStyle=color;ctx.lineWidth=2;ctx.lineCap='round';ctx.lineJoin='round';if(type==='mail'){roundRect(-11,-8,22,16,3,null,color,1.8);ctx.beginPath();ctx.moveTo(-10,-7);ctx.lineTo(0,1);ctx.lineTo(10,-7);ctx.stroke()}
     else if(type==='mfa'){disc(-4,-4,5,null,color,2);ctx.beginPath();ctx.moveTo(-1,0);ctx.lineTo(9,10);ctx.moveTo(4,5);ctx.lineTo(7,2);ctx.stroke()}
     else if(type==='edr'){disc(0,0,10,null,color,1.7);disc(0,0,4,null,color,1.7);ctx.beginPath();ctx.moveTo(0,-13);ctx.lineTo(0,-8);ctx.moveTo(0,8);ctx.lineTo(0,13);ctx.moveTo(-13,0);ctx.lineTo(-8,0);ctx.moveTo(8,0);ctx.lineTo(13,0);ctx.stroke()}

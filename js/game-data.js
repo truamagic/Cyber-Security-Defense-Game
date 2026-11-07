@@ -25,8 +25,8 @@ const TOWERS={
     {title:'複数経路からの圧力',subtitle:'攻撃の種類が多様化。弱い区間を見直そう。',interval:.69,bonus:150,hpMult:1.35,units:'auth phish malware auth phish malware auth phish malware auth malware phish auth malware auth phish malware auth phish malware auth malware phish auth malware auth malware auth'.split(' ')},
     {title:'最終防衛線',subtitle:'強力な障害リスクが出現。診療継続を守り抜こう。',interval:.65,bonus:0,hpMult:1.45,units:'auth malware phish auth malware auth phish malware auth malware phish auth malware auth phish malware auth malware phish auth malware boss phish auth malware auth malware phish auth malware boss'.split(' ')}
   ];
-  const PATH=[{x:-25,y:143},{x:163,y:143},{x:163,y:326},{x:372,y:326},{x:372,y:130},{x:596,y:130},{x:596,y:389},{x:821,y:389},{x:821,y:264},{x:992,y:264}];
-  const SIDE_PATH=[{x:953,y:53},{x:800,y:53},{x:800,y:231},{x:821,y:231},{x:821,y:264},{x:992,y:264}];
+  const PATH=[{x:60,y:143},{x:163,y:143},{x:163,y:326},{x:372,y:326},{x:372,y:130},{x:596,y:130},{x:596,y:389},{x:778,y:389},{x:778,y:264},{x:858,y:264}];
+  const SIDE_PATH=[{x:900,y:53},{x:800,y:53},{x:800,y:231},{x:778,y:231},{x:778,y:264},{x:858,y:264}];
   const PADS=[{x:73,y:60},{x:279,y:74},{x:71,y:274},{x:265,y:225},{x:269,y:441},{x:477,y:445},{x:479,y:246},{x:484,y:50},{x:725,y:51},{x:723,y:245},{x:720,y:477},{x:901,y:452},{x:910,y:143}];
   const lengthMap=nodes=>{const sections=[];let total=0;for(let i=1;i<nodes.length;i++){total+=Math.hypot(nodes[i].x-nodes[i-1].x,nodes[i].y-nodes[i-1].y);sections.push(total)}return {sections,total}};
   const PRIMARY=lengthMap(PATH),SECONDARY=lengthMap(SIDE_PATH);
