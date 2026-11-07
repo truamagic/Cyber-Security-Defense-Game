@@ -19,7 +19,7 @@
   function rand(r){let x=r.randomState>>>0;x^=x<<13;x^=x>>>17;x^=x<<5;r.randomState=x>>>0;return (r.randomState>>>0)/4294967296}
   const between=(r,min,max)=>min+Math.floor(rand(r)*(max-min+1));
   function profile(r){return MODES[r.mode]||MODES.normal}
-  function createTower(r,type,price){return {type,level:1,cooldown:.2,invested:price,health:100,preventive:0,supportLeft:profile(r).support,pending:null}}
+  function createTower(r,type,price){return {type,level:1,cooldown:.2,invested:price,health:100,preventive:0,supportLeft:profile(r).support,pending:null,lastChange:'新規設置：健全度100%'}}
   function isOffline(t){return (t?.health??100)<=8}
   function effectiveLevel(t){return Math.max(1,t.level-((t.health??100)<35?1:0))}
   function efficiency(t){if(!t)return 1;if(isOffline(t))return 0;
@@ -79,7 +79,7 @@
     if(!active.length)return {...output,title:'管理手順の混乱',message:'設備が未設置のため直接損傷はありません。'};
     if(kind==='cascade'&&active.length>=2){
       const sorted=[...active].sort((a,b)=>a.health-b.health).slice(0,2);
-      for(const t of sorted)t.health=clamp(t.health-between(r,10,16),0,100);
+      for(const t of sorted){const before=t.health;t.health=clamp(t.health-between(r,10,16),0,100);t.lastChange='複合障害による低下：'+(before-t.health)+'pt';}
       return {...output,title:'複合障害',message:'複数の設備が同時に不安定化し、診療と情報保護に影響しました。',integrityLoss:4,privacyLoss:3,noticeKind:'danger'};
     }
     const eligible=kind==='vulnerability'?[...active].sort((a,b)=>a.supportLeft-b.supportLeft):active;
@@ -87,7 +87,7 @@
     const loss=kind==='vulnerability'?between(r,13,21):between(r,17,28);
     const actual=target.preventive>0?Math.round(loss*.55):loss;
     const prior=target.health;
-    target.health=clamp(prior-actual,0,100);
+    target.health=clamp(prior-actual,0,100);target.lastChange=(kind==='vulnerability'?'脆弱性イベント：':'設備不調：')+(prior-target.health)+'pt低下';
     if(prior>8&&isOffline(target))r.breakdowns++;
     return {...output,title:kind==='vulnerability'?'未対応の脆弱性':'機器・ソフトウェアの不調',
       message:`${target.type.toUpperCase()}の健全度が${actual}pt低下。${isOffline(target)?'停止中のため応急保守が必要。':'保守で復旧できます。'}`};
@@ -95,14 +95,14 @@
   function doUpgrade(r,t,cost){const chance=upgradeChance(r,t);const succeed=rand(r)<chance;
     if(succeed){t.level++;return {succeed:true,chance}}
     t.pending={targetLevel:t.level+1,remaining:1,cost};r.upgradeDelays++;
-    if(r.mode==='hard'&&rand(r)<.40)t.health=clamp(t.health-7,0,100);
+    if(r.mode==='hard'&&rand(r)<.40){t.health=clamp(t.health-7,0,100);t.lastChange='導入トラブルによる健全度低下：7pt';}
     return {succeed:false,chance};
   }
   function doMaintenance(r,t){if(t.health>=100)return false;
-    t.health=clamp(t.health+(isOffline(t)?58:42),0,100);r.services++;return true;
+    const before=t.health;t.health=clamp(t.health+(isOffline(t)?58:42),0,100);t.lastChange='定期・応急保守により+'+(t.health-before)+'pt回復';r.services++;return true;
   }
-  function doPreventive(r,t){t.preventive=Math.max(t.preventive,2);r.services++}
-  function doRenewal(r,t){t.supportLeft=profile(r).support;r.services++}
+  function doPreventive(r,t){t.preventive=Math.max(t.preventive,2);t.lastChange='予防保守を実施（自然劣化を抑制）';r.services++}
+  function doRenewal(r,t){t.supportLeft=profile(r).support;t.lastChange='サポート更新を実施';r.services++}
   function advanceWave(r,towers){const changes=[];const m=profile(r);
     if(r.mode==='easy')return changes;
     for(const [i,t] of towers.entries()){
@@ -111,7 +111,7 @@
       const wear=between(r,m.wear[0],m.wear[1]);
       const less=t.preventive>0?Math.round(wear*.40):wear;
       const before=t.health;
-      t.health=clamp(t.health-less,0,100);
+      t.health=clamp(t.health-less,0,100);if(before!==t.health)t.lastChange='ウェーブ終了時の自然劣化：'+(before-t.health)+'pt低下'+(t.preventive>0?'（予防保守で軽減）':'');
       if(t.supportLeft>0)t.supportLeft--;
       if(t.preventive>0)t.preventive--;
       if(before>8&&isOffline(t)){r.breakdowns++;changes.push(`地点${i+1}：設備停止。保守が必要です`)}

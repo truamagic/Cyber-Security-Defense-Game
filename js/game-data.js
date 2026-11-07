@@ -6,7 +6,7 @@
   const W=960,H=560,MAX_LEVEL=3,BCP_COST=130,BCP_HEAL=16,TRAINING_COSTS=[110,160,215],TRAINING_SPEED=[1,.79,.60,.43];
 
 const TOWERS={
-    mail:{name:'メールフィルター',short:'メール対策',icon:'mail',cost:100,upgrade:[85,135],damage:18,rate:.54,range:139,color:'#4cdec3',desc:'不審メールを抑制。フィッシング型に強い。',perk:'強化でフィッシング型への対応強度が追加上昇。',vs:{phish:1.75,auth:.65,malware:.45,insider:.55,boss:.5}},
+    mail:{name:'メールフィルター',short:'メールフィルター',icon:'mail',cost:100,upgrade:[85,135],damage:18,rate:.54,range:139,color:'#4cdec3',desc:'不審メールを抑制。フィッシング型に強い。',perk:'強化でフィッシング型への対応強度が追加上昇。',vs:{phish:1.75,auth:.65,malware:.45,insider:.55,boss:.5}},
     mfa:{name:'多要素認証（MFA）',short:'MFA',icon:'key',cost:140,upgrade:[105,160],damage:22,rate:.76,range:136,color:'#f4c979',desc:'認証情報の悪用に強い。認証型の敵を抑制。',perk:'強化で認証悪用型への対応強度が追加上昇。',vs:{phish:.5,auth:1.95,malware:.55,insider:.55,boss:.6}},
     edr:{name:'端末検知・対応（EDR）',short:'EDR',icon:'radar',cost:175,upgrade:[130,190],damage:25,rate:.87,range:164,color:'#a6b7ff',desc:'不審な挙動の検知・対応。マルウェア型に強い。',perk:'強化でマルウェア・人的リスク型への対応強度が追加上昇。',vs:{phish:.8,auth:.8,malware:1.85,insider:1.75,boss:1.55}},
     segment:{name:'ネットワーク分離',short:'分離',icon:'network',cost:155,upgrade:[110,170],damage:15,rate:1.04,range:134,color:'#d5a3ff',desc:'全ての敵の進行を一時的に遅らせる。',perk:'強化で進行遅延の持続時間をさらに延長。',vs:{phish:.9,auth:1,malware:.9,insider:1.1,boss:.78},slow:1.15}
