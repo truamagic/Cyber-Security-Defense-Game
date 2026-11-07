@@ -56,7 +56,7 @@
 <div class="shell" id="gameShell" hidden>
   <header class="header">
     <div class="brand-mark" aria-hidden="true"><img src="./assets/hospital-defense-icon.png" width="52" height="52" alt="" decoding="async"></div>
-    <div class="brand-copy"><div class="eyebrow">CYBERSECURITY TOWER DEFENSE</div><h1>HOSPITAL <span>DEFENSE</span> <span class="version">C / RISK 4.2</span></h1></div>
+    <div class="brand-copy"><div class="eyebrow">CYBERSECURITY TOWER DEFENSE</div><h1>HOSPITAL <span>DEFENSE</span> <span class="version">C / RISK 4.3</span></h1></div>
     <div class="header-right">
       <span class="header-note"><span class="live-dot"></span> OFFLINE MODE / 通信なし</span>
       <select id="difficultySelect" hidden aria-hidden="true"><option value="easy">EASY</option><option value="normal" selected>NORMAL</option><option value="hard">HARD</option></select>
@@ -78,7 +78,7 @@
   <section class="risk-summary" id="riskSummary" aria-label="設備・運用リスクの状況"><div><span>運用リスク予測</span><strong id="riskChance">20%</strong></div><div><span>設備の平均健全度</span><strong id="riskHealth">—</strong></div><div><span>教育の定着度</span><strong id="riskAdherence">72%</strong></div><div><span>未対応・更新待ち</span><strong id="riskProblems">0件</strong></div><button type="button" class="risk-detail-trigger" id="riskDetailBtn">運用管理を開く ›</button></section>
   <main class="layout">
     <section class="card" aria-label="ゲームマップ">
-      <div class="board-head"><div class="board-title"><svg class="icon" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M2 9h20M9 9v12"/></svg> CENTRAL NETWORK <span style="color:#6b8493;font-weight:500">/ 仮想病院ネットワーク</span></div><div class="mini-status" id="phaseBadge"><span class="live-dot"></span><span id="phaseText">配置準備中</span></div></div>
+      <div class="board-head"><div class="board-title"><svg class="icon" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M2 9h20M9 9v12"/></svg> CENTRAL NETWORK <span style="color:#6b8493;font-weight:500">/ 仮想病院ネットワーク</span></div><span class="route-variant" id="routeVariant" aria-label="今回の基本侵入ルート">基本ルート 1/5</span><div class="mini-status" id="phaseBadge"><span class="live-dot"></span><span id="phaseText">配置準備中</span></div></div>
       <div class="command-bar" role="toolbar" aria-label="防衛設備と情報パネルを開く">
         <div class="command-buttons">
           <button class="command-btn" id="openShopBtn" type="button" data-panel="shop" aria-expanded="false" aria-controls="controlDrawer" title="タワーを購入する">
@@ -156,6 +156,7 @@
 <div class="modal-backdrop" id="modalBackdrop" role="presentation"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-top"><div class="modal-icon" id="modalIcon" aria-hidden="true">✦</div><button class="btn" id="modalClose" type="button" aria-label="閉じる">×</button></div><h2 id="modalTitle">遊び方</h2><div id="modalBody"></div><div class="modal-buttons" id="modalButtons"></div></div></div>
 <div class="toast" id="toast" role="status"></div>
 <script src="./js/game-data.js" defer></script>
+<script src="./js/route-system.js" defer></script>
 <script src="./js/risk-sim.js" defer></script>
 <script src="./js/app.js" defer></script>
 <script src="./js/menu.js" defer></script>

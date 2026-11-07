@@ -143,3 +143,11 @@
   body.tutorial-active #gameShell .board-bottom{padding-top:106px}
   #gameShell .tutorial-panel{max-height:102px}
 }
+
+/* v4.3: identify the chosen random primary corridor without hiding the map. */
+.route-variant{display:inline-flex;align-items:center;max-width:38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:4px 8px;border:1px solid #3c857e;border-radius:8px;background:#133d42;color:#b5f7e6;font-size:10px;font-weight:800;line-height:1.25}
+@media(max-width:680px){.route-variant{font-size:9px;padding:3px 5px;max-width:47%}}
+@media (orientation:landscape) and (max-height:600px) and (pointer:coarse){
+  #gameShell .board-title{display:none}
+  #gameShell .route-variant{max-width:calc(100% - 82px);font-size:8px;padding:3px 5px;overflow:hidden}
+}

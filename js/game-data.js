@@ -21,26 +21,22 @@ const TOWERS={
   const WAVE_DEFS=[
     {title:'不審メールの増加',subtitle:'フィッシング型が中心。まずは基礎防御を。',interval:.96,bonus:95,hpMult:1,units:'phish phish phish auth phish phish auth phish phish phish auth phish phish auth'.split(' ')},
     {title:'認証リスクの拡大',subtitle:'認証系の敵が増加。MFAの効果を試そう。',interval:.84,bonus:115,hpMult:1.12,units:'phish auth phish auth auth phish auth malware phish auth phish auth malware phish auth phish auth malware'.split(' ')},
-    {title:'端末への脅威',subtitle:'マルウェア型が増加。EDRと分離を組み合わせよう。',interval:.75,bonus:135,hpMult:1.23,units:'malware phish auth malware auth phish malware phish auth malware auth phish malware auth malware phish malware auth phish malware auth phish malware auth'.split(' ')},
+    {title:'端末への脅威',subtitle:'中央の新侵入経路が開放。EDRと分離を組み合わせよう。',interval:.75,bonus:135,hpMult:1.23,units:'malware phish auth malware auth phish malware phish auth malware auth phish malware auth malware phish malware auth phish malware auth phish malware auth'.split(' ')},
     {title:'複数経路からの圧力',subtitle:'攻撃の種類が多様化。弱い区間を見直そう。',interval:.69,bonus:150,hpMult:1.35,units:'auth phish malware auth phish malware auth phish malware auth malware phish auth malware auth phish malware auth phish malware auth malware phish auth malware auth malware auth'.split(' ')},
-    {title:'最終防衛線',subtitle:'強力な障害リスクが出現。診療継続を守り抜こう。',interval:.65,bonus:0,hpMult:1.45,units:'auth malware phish auth malware auth phish malware auth malware phish auth malware auth phish malware auth malware phish auth malware boss phish auth malware auth malware phish auth malware boss'.split(' ')},
+    {title:'病院システムへの接近',subtitle:'病院付近の新侵入経路が開放。至近防衛線を強化しよう。',interval:.65,bonus:0,hpMult:1.45,units:'auth malware phish auth malware auth phish malware auth malware phish auth malware auth phish malware auth malware phish auth malware boss phish auth malware auth malware phish auth malware boss'.split(' ')},
     {title:'障害連鎖の拡大',subtitle:'長期戦。設備健全度と保守体制が試されます。',interval:.62,bonus:190,hpMult:1.57,units:'malware auth phish malware auth malware phish auth malware auth malware phish auth malware phish malware auth malware phish auth malware boss auth phish malware auth'.split(' ')},
     {title:'最終防衛指令',subtitle:'追加の最終ウェーブ。蓄えた対策とBCPを総動員しましょう。',interval:.59,bonus:0,hpMult:1.70,units:'auth malware phish malware auth phish malware auth malware phish auth malware boss phish malware auth malware phish auth malware boss malware auth phish malware auth malware boss'.split(' ')}
   ];
-  const PATH=[{x:60,y:143},{x:163,y:143},{x:163,y:326},{x:372,y:326},{x:372,y:130},{x:596,y:130},{x:596,y:389},{x:778,y:389},{x:778,y:264},{x:858,y:264}];
-  const SIDE_PATH=[{x:900,y:53},{x:800,y:53},{x:800,y:231},{x:778,y:231},{x:778,y:264},{x:858,y:264}];
-  const PADS=[{x:73,y:60},{x:279,y:74},{x:71,y:274},{x:265,y:225},{x:269,y:441},{x:477,y:445},{x:479,y:246},{x:484,y:50},{x:725,y:51},{x:723,y:245},{x:720,y:477},{x:901,y:452},{x:910,y:143}];
-  const lengthMap=nodes=>{const sections=[];let total=0;for(let i=1;i<nodes.length;i++){total+=Math.hypot(nodes[i].x-nodes[i-1].x,nodes[i].y-nodes[i-1].y);sections.push(total)}return {sections,total}};
-  const PRIMARY=lengthMap(PATH),SECONDARY=lengthMap(SIDE_PATH);
-  const PATHLEN=PRIMARY.sections,TOTAL_PATH=PRIMARY.total;
-  // Events are abstract learning scenarios, not technical attack procedures.
+  // The 5 primary routes, both branch routes and each route's placement sites
+  // are defined and validated in js/route-system.js.
+  // Internal-risk events. Mid and late intrusion-route events are defined in route-system.js.
   const EVENT_PLANS={
     2:[{at:7.4,kind:'human',count:1}],
-    3:[{at:6.6,kind:'route',count:2},{at:12.2,kind:'human',count:1}],
-    4:[{at:7.0,kind:'route',count:3},{at:12.5,kind:'human',count:2}],
-    5:[{at:6.2,kind:'human',count:2},{at:10.5,kind:'route',count:4},{at:17.0,kind:'human',count:1}],
-    6:[{at:6.8,kind:'route',count:3},{at:12.4,kind:'human',count:2}],
-    7:[{at:6.4,kind:'human',count:2},{at:10.9,kind:'route',count:4},{at:16.2,kind:'human',count:2}]
+    3:[{at:12.2,kind:'human',count:1}],
+    4:[{at:12.5,kind:'human',count:2}],
+    5:[{at:6.2,kind:'human',count:2},{at:17.0,kind:'human',count:1}],
+    6:[{at:12.4,kind:'human',count:2}],
+    7:[{at:6.4,kind:'human',count:2},{at:16.2,kind:'human',count:2}]
   };
 
 const iconSVG={
@@ -57,5 +53,5 @@ const iconSVG={
     log:{title:'防衛イベントログ',kicker:'EVENT HISTORY'}
   };
 
-  window.HD_CONFIG = Object.freeze({W, H, MAX_LEVEL, BCP_COST, BCP_HEAL, TRAINING_COSTS, TRAINING_SPEED, TOWERS, ENEMIES, WAVE_DEFS, PATH, SIDE_PATH, PADS, PRIMARY, SECONDARY, PATHLEN, TOTAL_PATH, EVENT_PLANS, iconSVG, PANEL_CONFIG});
+  window.HD_CONFIG = Object.freeze({W, H, MAX_LEVEL, BCP_COST, BCP_HEAL, TRAINING_COSTS, TRAINING_SPEED, TOWERS, ENEMIES, WAVE_DEFS, EVENT_PLANS, iconSVG, PANEL_CONFIG});
 })();
