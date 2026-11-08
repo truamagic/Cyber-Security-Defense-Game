@@ -131,7 +131,7 @@
     target.health=clamp(prior-actual,0,100);target.lastChange=(kind==='vulnerability'?'脆弱性イベント：':'設備不調：')+(prior-target.health)+'pt低下';
     if(prior>8&&isOffline(target))r.breakdowns++;
     return {...output,title:kind==='vulnerability'?'未対応の脆弱性':'機器・ソフトウェアの不調',
-      message:`${target.type.toUpperCase()}の健全度が${actual}pt低下。${isOffline(target)?'停止中のため応急保守が必要。':'保守で復旧できます。'}`};
+      message:`${window.HD_CONFIG?.TOWERS?.[target.type]?.name||target.type}の健全度が${actual}pt低下。${isOffline(target)?'停止中のため応急保守が必要。':'保守で復旧できます。'}`};
   }
   function doUpgrade(r,t,cost,dueWave=null){const chance=upgradeChance(r,t);const succeed=rand(r)<chance;
     if(succeed){t.level++;return {succeed:true,chance}}

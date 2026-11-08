@@ -24,6 +24,8 @@
   if(!Risk)throw Error('Risk simulation module not loaded');
   const SessionUI=window.HD_SESSION_UI;
   if(!SessionUI)throw Error('Session UI rules not loaded');
+  const Decision=window.HD_DECISION;
+  if(!Decision)throw Error('v4.9 decision-support module not loaded');
   const Spotlight=window.HD_SPOTLIGHT;
   if(!Spotlight)throw Error('Tutorial spotlight module not loaded');
   const canvas=document.getElementById('board'),ctx=canvas.getContext('2d');
@@ -328,9 +330,9 @@
   function syncPadButtons(){for(const b of $('padHitLayer').children){const i=Number(b.dataset.pad),t=game.towers[i];b.className='map-pad-btn'+(t?' occupied':'')+(game.selectedPad===i?' selected':'')+(placement?.pad===i?' pending':'');b.setAttribute('aria-label',`地点 ${i+1}：${t?TOWERS[t.type].name+' Lv.'+t.level+'を選択':placement?.pad===i?'設置プレビュー中、設備を選択する':'空き地点、押すと設備ショップが開く'}`);b.title=t?`地点${i+1} ${TOWERS[t.type].name} Lv.${t.level} / タップして強化`:`地点${i+1}：押して設置する設備を選択`}}
   function renderQuickTower(){const el=$('quickTower'),pad=game.selectedPad,t=pad>=0?game.towers[pad]:null;el.textContent='';const wrap=document.createElement('div');wrap.className='quick-text';const name=document.createElement('span');name.className='quick-name';const desc=document.createElement('span');desc.className='quick-desc';wrap.append(name,desc);el.append(wrap);
     if(!t){name.textContent=placement?'地点 '+(placement.pad>=0?placement.pad+1:'選択待ち')+'｜仮配置中':'防御設備の設置';desc.textContent=placement?'射程を見て「設置確定」を押してください':'マップ上の＋を押すとショップが開きます';return}
-    const base=TOWERS[t.type],next=base.upgrade[t.level-1];name.textContent=`地点 ${pad+1}｜${base.short} Lv.${t.level}/3`;
+    const base=TOWERS[t.type];name.textContent=`地点 ${pad+1}｜${base.short} Lv.${t.level}/3`;
     const warn=Risk.isOffline(t)?'⚠ 停止（保守が必要）':t.pending?'⌛ 更新作業中':t.supportLeft===0?'⚠ サポート切れ':t.health<40?'⚠ 性能低下':`健全度${t.health}%`;
-    desc.textContent=`${warn} ｜ ${t.level===3?'最大強化済み':`次の強化：${next} SP`}`;
+    desc.textContent=`${warn} ｜ ${Decision.upgradeSummary(game,t,base,SessionUI)}`;
     const btn=document.createElement('button');btn.type='button';btn.className='btn btn-primary quick-upgrade-btn';btn.textContent='強化・管理';btn.addEventListener('click',()=>openDrawer('upgrade'));el.append(btn)}
   function renderTraining(){
     const lv=game.trainingLevel,cost=TRAINING_COSTS[lv],effective=Risk.educationSpeed(game.risk,lv,TRAINING_SPEED);
@@ -342,6 +344,11 @@
     const r=game.risk;
     $('educationReality').innerHTML=`<span>行動への定着度 <strong>${r.adherence}%</strong></span><div class="risk-healthbar"><i style="width:${r.adherence}%"></i></div><small>実施Lv.${lv} ／ 定着した教育Lv.${r.effectiveTraining}。定着失敗${r.trainingFailures}回。業務負担や報告文化もゲーム上の要因です。</small>`;
     $('followUpBtn').disabled=lv===0||r.mode==='easy'||game.sp<80||(r.adherence>=100&&r.effectiveTraining>=lv)||['won','lost'].includes(game.phase);
+    const advice=Decision.trainingAdvice(game,TRAINING_COSTS,Risk);
+    $('educationDecision').innerHTML=`<strong>この投資は何に効く？</strong>
+      <p>${advice.applicable}</p>
+      <p>現在の人的リスク減速：${advice.speedReduction}%。次回の研修（${advice.cost} SP）後の残SP：${advice.nextSP}。定着失敗確率：${advice.failureRate}%（ゲーム上の設定）。</p>
+      <p class="decision-warning">${advice.warning}</p><p>${advice.period} ${advice.success}</p>`;
   }
   function upgradeTraining(){
     if(tutorial?.active&&!tutorialPermit('training'))return;
@@ -411,6 +418,11 @@
     const reportCost=reportingCost();
     $('reportingBtn').disabled=r.mode==='easy'||r.reporting>=3||game.sp<reportCost||finished;
     $('reportingBtn').textContent=r.reporting>=3?'✓ 報告体制 MAX':`報告体制 Lv.${r.reporting}/3 → Lv.${r.reporting+1}（${reportCost} SP）`;
+    const reporting=Decision.reportingAdvice(game,reportCost,Risk);
+    $('reportingDecision').innerHTML=`<strong>報告体制は直接攻撃力を増やしません</strong>
+      <p>次Lvへの投資：${reportCost} SP／投資後残高：${reporting.nextSP} SP。</p>
+      <p>この設備状況での運用事故の見込み：${reporting.before}% → ${reporting.after}%（改善後の予測。確率であり保証ではありません）。</p>
+      <p class="decision-warning">${reporting.note} 初期WAVEでは防御設備を揃えるSPとの両立が必要です。</p>`;
     const list=$('riskTowerList');list.textContent='';
     if(!active.length){const div=document.createElement('p');div.className='risk-message';div.textContent='設備はまだありません。マップからタワーを設置すると保守管理ができます。';list.append(div)}
     game.towers.forEach((t,i)=>{if(!t)return;
@@ -451,8 +463,25 @@
   }
 
   function renderMobilePads(){const el=$('mobilePads');el.textContent='';for(let i=0;i<PADS.length;i++){const t=game.towers[i],btn=document.createElement('button');btn.type='button';btn.className='slot-btn'+(t?' occupied':'')+(game.selectedPad===i?' selected':'');btn.setAttribute('aria-label',`配置場所 ${i+1}：${t?TOWERS[t.type].name:'空き'}`);btn.innerHTML=`<strong>${String(i+1).padStart(2,'0')}</strong><small>${t?TOWERS[t.type].short:'＋ 空き'}</small>`;btn.addEventListener('click',()=>pressPad(i));el.append(btn)}}
+  function renderWaveForecast(){
+    const target=$('shopForecast');
+    const info=Decision.nextWave(game,window.HD_CONFIG,SessionUI,Routing);
+    if(!info||!!tutorial?.active){target.hidden=true;target.textContent='';return}
+    target.hidden=false;
+    const order=['phish','auth','malware','insider','boss'];
+    const known=order.filter(key=>info.counts[key]).map(key=>
+      `<span class="forecast-cell"><span>${ENEMIES[key].name}</span><strong>${info.counts[key]}体</strong></span>`).join('');
+    const extras=info.branches.map(branch=>`${branch.route==='mid'?'中央':'病院付近'}の追加経路${branch.count}体`).join('／');
+    const notes=[`基本経路${info.mainCount}体`,extras,
+      info.human?`人的リスクの追加出現予定（最大${info.human}件、早期報告により減少する可能性）`:'',
+      info.uncertain?'運用事故・Wi-Fi特殊イベントは確率によって変化します。':'']
+      .filter(Boolean);
+    target.innerHTML=`<h3>次WAVE ${info.wave}：${info.name}（既知の脅威予測）</h3>
+      <div class="forecast-grid">${known}</div><p>${notes.join('／')}</p>
+      <p>設備相性：メールフィルター→フィッシング、MFA→認証、EDR→マルウェア、分離→進行を遅らせる。</p>`;
+  }
   function renderShop(){
-    const el=$('shop');el.innerHTML='';
+    const el=$('shop');el.innerHTML='';renderWaveForecast();
     const placed=placement&&placement.pad>=0;
     $('shopIntro').textContent=placed?`地点 ${placement.pad+1} に設置する設備を選んでください。選択後、射程の円を確認してから確定できます。`:'設備を選ぶとマップに戻ります。空き地点をタップして射程を確認してから確定してください。';
     $('shopLocation').hidden=!placed;
@@ -510,6 +539,13 @@
     detail.append(maintenance)
 
   }
+  function updateBCPButton(){
+    const state=Decision.canUseBCP(game,!!tutorial?.active,BCP_COST),btn=$('bcpBtn');
+    btn.disabled=!state.enabled;
+    btn.textContent=game.bcpUsed?'✓ BCP使用済み':`▣ BCP発動（${BCP_COST} SP）`;
+    btn.title=(state.reason?state.reason+'。':'')+state.explanation;
+    btn.setAttribute('aria-label',btn.textContent+'。'+btn.title);
+  }
   function syncLiveEconomy(force=false){
     if(!Number.isFinite(game.sp)||(!force&&game.sp===lastSyncedSP))return;
     lastSyncedSP=game.sp;
@@ -517,7 +553,7 @@
     // all display this same canonical game.sp value.
     SessionUI.syncWalletDOM(document,game.sp,TOWERS);
     const finished=game.phase==='won'||game.phase==='lost';
-    $('bcpBtn').disabled=finished||game.sp<BCP_COST||game.integrity>=100||game.bcpUsed||!!tutorial?.active;
+    updateBCPButton();
     const lv=game.trainingLevel;
     $('trainingBtn').disabled=lv>=3||game.sp<TRAINING_COSTS[lv]||finished;
     const r=game.risk;
@@ -543,15 +579,21 @@
     const phaseNames={ready:'配置準備中',active:game.paused?'一時停止中':'防衛中',intermission:'強化フェーズ',won:'防衛成功',lost:'ミッション失敗'};
     const tutorialDone=isGuided('complete');
     $('phaseText').textContent=tutorialDone?'練習完了':phaseNames[game.phase];$('phaseBadge').className='mini-status '+(active?'is-active':game.phase==='lost'?'is-failed':'');
+    const installed=game.towers.map((t,i)=>t?`地点${i+1} ${TOWERS[t.type].short}Lv.${t.level}`:null).filter(Boolean);
+    canvas.setAttribute('aria-label',`防衛マップ。基本ルート${game.routeIndex+1}/5。
+      WAVE ${game.wave}/${game.waveLimit}、${active?'敵'+game.enemies.length+'体が進行中':'現在は配置・準備画面'}。
+      診療継続度${Math.round(game.integrity)}%、情報保護度${Math.round(game.privacy)}%。
+      設置済み${installed.length}基：${installed.length?installed.join('、'):'なし'}。
+      設置地点はマップ上のボタンから選択できます。`);
     $('mapMessage').textContent=tutorialDone?'TUTORIAL COMPLETE':game.phase==='won'?'MISSION COMPLETE':game.phase==='lost'?'MISSION FAILED':active?`WAVE ${game.wave} / ACTIVE`:game.wave===0?'WAVE 1 / STANDBY':`WAVE ${Math.min(game.wave+1,game.waveLimit)} / STANDBY`;
     $('startBtn').disabled=active||finished||tutorialDone||game.wave>=game.waveLimit||!!placement;$('startBtn').textContent=tutorialDone?'✓ 練習完了':game.wave===0?'▶ ウェーブ 1 開始':game.phase==='intermission'?`▶ ウェーブ ${game.wave+1} 開始`:'▶ ウェーブ開始';
     $('pauseBtn').disabled=!active||!!placement;$('pauseBtn').textContent=placement&&active?'◎ 設置中は停止':game.paused?'▶ 再開':'Ⅱ 一時停止';
     $('speedBtn').textContent=game.speed===1?'×1 通常速度':'×2 倍速';
-    $('bcpBtn').disabled=finished||game.sp<BCP_COST||game.integrity>=100||game.bcpUsed;$('bcpBtn').textContent=game.bcpUsed?'✓ BCP使用済み':`▣ BCP発動（${BCP_COST} SP）`;
+    updateBCPButton();
     const current=WAVE_DEFS[game.wave-1],upcoming=WAVE_DEFS[game.wave];
     $('waveLabel').textContent=tutorialDone?'練習完了：メニューへ戻る':active?`進行中：${current.title}`:game.phase==='intermission'&&upcoming?`次：${upcoming.title}`:game.phase==='won'?'全ウェーブ防衛完了':game.phase==='lost'?'病院の防衛機能が停止':upcoming?`次：${upcoming.title}`:'最終結果';
     if(!active&&!finished&&!tutorialDone&&game.wave+1===5){
-      $('waveLabel').textContent+=game.waveLimit===7?'（7 WAVE中間報酬 +170 SP）':'（5 WAVE最終戦・報酬 0 SP）';
+      $('waveLabel').textContent+=game.waveLimit===7?'（W5突破すると +170 SP）':'（W5突破時 +0 SP）';
     }
     $('waveCounter').textContent=tutorialDone?'1 / 1 完了':active?`${game.spawned} / ${game.spawnTotal} 出現・残 ${game.enemies.length}`:game.phase==='intermission'?`${game.wave} / ${game.waveLimit} クリア`:game.phase==='won'?`${game.waveLimit} / ${game.waveLimit}`:game.phase==='lost'?`${game.wave} / ${game.waveLimit}`:`0 / ${game.waveLimit}`;
     $('waveProgress').style.width=(tutorialDone?100:active&&game.spawnTotal?game.spawned/game.spawnTotal*100:game.phase==='won'?100:0)+'%';
@@ -592,7 +634,7 @@
     }
     if(game.wave===5&&!tutorial?.active){
       const amount=waveClearBonus(5);
-      addLog(`WAVE 5突破報酬：+${amount} SP（${game.waveLimit===5?'5 WAVEモードの最終戦':'7 WAVEモードの中間戦'}）`,'info');
+      addLog(`WAVE 5突破時に+${amount} SP獲得予定（現在は未加算／${game.waveLimit===5?'5 WAVE最終戦':'7 WAVE中間戦'}）`,'info');
     }
     game.phase='active';
     game.queue=(isGuided('waveReady')?['phish','phish','auth','phish']:SessionUI.waveUnits(game.risk.mode,game.wave,wave.units));
@@ -678,7 +720,10 @@
       addLog(`人的リスク：発見・報告${detected}件／進行${arrived}件`,'warn');}
     game.noticeLeft=4.2;toast(game.notice);refreshUI()}
 
-  function activateBCP(){if(tutorial?.active){toast('BCPは通常モードで試せます');return}if(game.phase==='won'||game.phase==='lost'||game.bcpUsed||game.integrity>=100||game.sp<BCP_COST)return;game.sp-=BCP_COST;game.spending.bcp+=BCP_COST;game.integrity=Math.min(100,game.integrity+BCP_HEAL);game.bcpUsed=true;addLog('BCP：代替運用で診療継続度を一部回復（-130 SP）');toast('BCPを発動：診療継続度を一部回復');refreshUI()}
+  function activateBCP(){
+    const state=Decision.canUseBCP(game,!!tutorial?.active,BCP_COST);
+    if(!state.enabled){toast(state.reason);return}
+    game.sp-=BCP_COST;game.spending.bcp+=BCP_COST;game.integrity=Math.min(100,game.integrity+BCP_HEAL);game.bcpUsed=true;addLog('BCP：代替運用で診療継続度を一部回復（-130 SP）');toast('BCPを発動：診療継続度を一部回復');refreshUI()}
   function update(dt){visualT+=dt;for(const effect of game.effects)effect.life-=dt;game.effects=game.effects.filter(e=>e.life>0);if(game.phase!=='active'||game.paused)return;
     const delta=Math.min(.065,dt)*game.speed;game.time+=delta;game.spawnTimer-=delta;game.noticeLeft=Math.max(0,game.noticeLeft-delta);
     const wave=WAVE_DEFS[game.wave-1];
@@ -687,7 +732,7 @@
     for(let i=0;i<game.towers.length;i++){const tower=game.towers[i];if(!tower||Risk.isOffline(tower))continue;tower.cooldown-=delta;if(tower.cooldown>0)continue;const base=TOWERS[tower.type],s=levelStats(tower),pad=PADS[i];let target=null;
       for(const enemy of game.enemies){const p=posAt(enemy.distance,enemy.route);if(Math.hypot(p.x-pad.x,p.y-pad.y)<=s.range+ENEMIES[enemy.kind].radius){if(!target||enemy.distance/routeData(enemy.route).total>target.distance/routeData(target.route).total)target=enemy}}
       if(target){tower.cooldown=s.rate;const ep=posAt(target.distance,target.route),lv=Risk.effectiveLevel(tower)-1,special=(tower.type==='mail'&&target.kind==='phish')||(tower.type==='mfa'&&target.kind==='auth')||(tower.type==='edr'&&(target.kind==='malware'||target.kind==='insider'));
-        const impact=s.damage*(base.vs[target.kind]||1)*(special?1+lv*.22:1);const actualDamage=Math.min(target.hp,impact);target.hp-=impact;target.flash=.14;const stats=game.towerStats[tower.type]||(game.towerStats[tower.type]={shots:0,kills:0,damage:0});stats.shots++;stats.damage+=Math.max(0,actualDamage);if(base.slow)target.slowLeft=Math.max(target.slowLeft,base.slow+lv*.48);game.effects.push({type:'beam',from:{x:pad.x,y:pad.y},to:ep,color:base.color,life:.16,max:.16});if(target.hp<=0){game.enemies.splice(game.enemies.indexOf(target),1);const targetInfo=ENEMIES[target.kind];game.sp+=SessionUI.killReward(game.risk.mode,game.wave,targetInfo.reward);game.score+=targetInfo.reward*10;game.kills++;stats.kills++;game.killsByKind[target.kind]=(game.killsByKind[target.kind]||0)+1;if(game.selectedPad>=0){renderDetail();renderQuickTower()}renderTraining();$('bcpBtn').disabled=game.bcpUsed||game.integrity>=100||game.sp<BCP_COST;game.effects.push({type:'burst',x:ep.x,y:ep.y,color:targetInfo.color,life:.47,max:.47});}}
+        const impact=s.damage*(base.vs[target.kind]||1)*(special?1+lv*.22:1);const actualDamage=Math.min(target.hp,impact);target.hp-=impact;target.flash=.14;const stats=game.towerStats[tower.type]||(game.towerStats[tower.type]={shots:0,kills:0,damage:0});stats.shots++;stats.damage+=Math.max(0,actualDamage);if(base.slow)target.slowLeft=Math.max(target.slowLeft,base.slow+lv*.48);game.effects.push({type:'beam',from:{x:pad.x,y:pad.y},to:ep,color:base.color,life:.16,max:.16});if(target.hp<=0){game.enemies.splice(game.enemies.indexOf(target),1);const targetInfo=ENEMIES[target.kind];game.sp+=SessionUI.killReward(game.risk.mode,game.wave,targetInfo.reward);game.score+=targetInfo.reward*10;game.kills++;stats.kills++;game.killsByKind[target.kind]=(game.killsByKind[target.kind]||0)+1;if(game.selectedPad>=0){renderDetail();renderQuickTower()}renderTraining();updateBCPButton();game.effects.push({type:'burst',x:ep.x,y:ep.y,color:targetInfo.color,life:.47,max:.47});}}
       else tower.cooldown=0;
     }
     if(game.spawnIndex>=game.queue.length&&game.waveEvents.every(e=>e.fired)&&game.enemies.length===0){const clearBonus=waveClearBonus();game.sp+=clearBonus;game.score+=Math.round((game.integrity+game.privacy)*6);

@@ -68,13 +68,19 @@
     for(const btn of document.querySelectorAll('[data-required-sp]')){
       const cost=Number(btn.dataset.requiredSp);
       const permanentLock=btn.dataset.baseDisabled==='true';
-      btn.disabled=permanentLock||sp<cost;
+      const shortage=sp<cost;
+      btn.disabled=permanentLock||shortage;
+      btn.title=permanentLock?'設備・ミッションの状態から現在は実行できません':
+        shortage?`SP不足（必要${cost} SP／所持${display} SP）`:btn.textContent;
+      btn.setAttribute?.('aria-label',(btn.textContent||'')+(btn.disabled?'。'+btn.title:''));
     }
     for(const btn of document.querySelectorAll('.shop-item[data-id]')){
       const tower=towers[btn.dataset.id];
       if(!tower)continue;
       const shortage=sp<tower.cost;
       btn.classList.toggle('is-unaffordable',shortage);
+      btn.setAttribute?.('aria-disabled',String(shortage));
+      btn.title=shortage?`SP不足：必要${tower.cost} SP／所持${display} SP`:(btn.textContent||'').trim();
       const warning=btn.querySelector('.shop-warning');
       if(warning)warning.hidden=!shortage;
     }

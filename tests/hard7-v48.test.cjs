@@ -94,5 +94,5 @@ assert.ok(app.includes('SessionUI.hpMultiplier(game.risk.mode,game.wave,w.hpMult
 assert.ok(app.includes('SessionUI.killReward(game.risk.mode,game.wave,targetInfo.reward)'));
 assert.ok(app.includes('game.sp=360;refreshUI()'),'tutorial must retain original 360-SP balance');
 assert.ok(app.includes("sp:SessionUI.startingSP($('difficultySelect').value)"));
-assert.ok(html.includes('C / RISK 4.8'));
+assert.match(html,/C \/ RISK 4\.[0-9]+/,'C版のv4.xバージョンが表示されること');
 console.log('PASS: delayed upgrade due-wave persistence, terminal label, modal precedence, one-pass efficiency, HARD-only early/late balance');

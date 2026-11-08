@@ -4,7 +4,7 @@
 (() => {
   'use strict';
   const NS='http://www.w3.org/2000/svg';
-  let root,svg,mask,shade,holes=[],rings=[],hint,titleText,tipText,countText;
+  let root,svg,mask,maskBase,shade,holes=[],rings=[],hint,titleText,tipText,countText;
   let primary=null,secondary=null,paused=false,raf=0,until=0,last="";
   const $=(id)=>document.getElementById(id);
   const clamp=(v,low,high)=>Math.max(low,Math.min(high,v));
@@ -29,11 +29,11 @@
     svg=svgEl('svg',{'class':'tutorial-spotlight-svg',width:'100%',height:'100%',preserveAspectRatio:'none'},root);
     const defs=svgEl('defs',{},svg);
     mask=svgEl('mask',{id:'hdTutorialSpotlightMask',maskUnits:'userSpaceOnUse',maskContentUnits:'userSpaceOnUse'},defs);
-    svgEl('rect',{x:0,y:0,width:'100%',height:'100%',fill:'#fff'},mask);
+    maskBase=svgEl('rect',{x:0,y:0,width:0,height:0,fill:'#fff'},mask);
     for(let i=0;i<2;i++){
       holes.push(svgEl('rect',{x:0,y:0,width:0,height:0,rx:12,fill:'#000'},mask));
     }
-    shade=svgEl('rect',{x:0,y:0,width:'100%',height:'100%',mask:'url(#hdTutorialSpotlightMask)',class:'tutorial-spotlight-shade'},svg);
+    shade=svgEl('rect',{x:0,y:0,width:0,height:0,mask:'url(#hdTutorialSpotlightMask)',class:'tutorial-spotlight-shade'},svg);
     for(let i=0;i<2;i++)rings.push(make('div','tutorial-spotlight-ring'+(i===1?' tutorial-spotlight-ring-secondary':''),root));
     hint=make('div','tutorial-spotlight-hint',root);
     countText=make('span','tutorial-spotlight-count',hint);
@@ -98,7 +98,12 @@
     const bounds=second?[r,second]:[r];
     root.hidden=false;
     svg.setAttribute('viewBox',`0 0 ${screen.w} ${screen.h}`);
+    mask.setAttribute('x',0);mask.setAttribute('y',0);
     mask.setAttribute('width',screen.w);mask.setAttribute('height',screen.h);
+    // Use the same numeric SVG coordinate system for backdrop, mask and cutouts.
+    // Percent-based mask rects could truncate the shade near drawer boundaries.
+    maskBase.setAttribute('width',screen.w);maskBase.setAttribute('height',screen.h);
+    shade.setAttribute('width',screen.w);shade.setAttribute('height',screen.h);
     for(let i=0;i<2;i++){
       const hole=holes[i],ring=rings[i],b=bounds[i];
       if(!b){hole.setAttribute('width',0);hole.setAttribute('height',0);ring.hidden=true;continue;}
@@ -141,7 +146,7 @@
     paused=false;
     last='';
     if(!primary){hide();return;}
-    if(changed)revealTarget(primary);
+    if(changed||root.hidden)revealTarget(primary);
     countText.textContent=options.count||'';
     titleText.textContent=options.title||'次の操作';
     tipText.textContent=options.tip||'明るく表示された場所を操作してください。';
@@ -153,12 +158,20 @@
     if(root)root.hidden=true;
   }
   function suspend(){paused=true;if(root)root.hidden=true;if(raf){cancelAnimationFrame(raf);raf=0;}}
-  function refresh(){if(primary&&!paused){update();trackFor(310);}}
-  window.addEventListener('resize',()=>refresh());
-  window.addEventListener('orientationchange',()=>refresh());
+  function refresh(){if(primary&&!paused){update();trackFor(900);}}
+  function refreshAfterLayout(){
+    if(!primary||paused)return;
+    revealTarget(primary);refresh();
+    // Mobile rotation can settle after the initial orientationchange event.
+    setTimeout(()=>{if(primary&&!paused){revealTarget(primary);refresh();}},260);
+    setTimeout(()=>{if(primary&&!paused){revealTarget(primary);refresh();}},650);
+  }
+  window.addEventListener('resize',refreshAfterLayout);
+  window.addEventListener('orientationchange',refreshAfterLayout);
+  window.addEventListener('pageshow',refreshAfterLayout);
   window.addEventListener('scroll',()=>{if(primary&&!paused)update();},true);
   if(window.visualViewport){
-    window.visualViewport.addEventListener('resize',refresh);
+    window.visualViewport.addEventListener('resize',refreshAfterLayout);
     window.visualViewport.addEventListener('scroll',()=>{if(primary&&!paused)update();});
   }
   window.HD_SPOTLIGHT=Object.freeze({show,hide,suspend,refresh});
