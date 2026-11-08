@@ -88,3 +88,18 @@
   .modal-backdrop{padding:8px}
   .modal-backdrop .modal{max-height:calc(100dvh - 16px)}
 }
+
+/* v4.7 — upgrade delay must show the free-vs-paid decision before payment. */
+.upgrade-delay-note{
+  margin:9px 0 10px;padding:10px 12px;border:1px solid #b78d5d;border-radius:10px;
+  background:linear-gradient(125deg,#433324,#263442);color:#f9e9d1;
+  font-size:11px;line-height:1.7;overflow-wrap:anywhere;
+}
+.upgrade-delay-note strong{display:block;color:#ffe3a2;font-size:12px;line-height:1.45;margin-bottom:4px}
+.upgrade-delay-note>div{margin:3px 0}
+.risk-tower-card .upgrade-delay-note{padding:9px;font-size:10px;margin:0}
+.modal #modalTitle:focus-visible{outline:2px solid #80eacb;outline-offset:4px;border-radius:4px}
+@media (orientation:landscape) and (max-height:600px) and (pointer:coarse){
+  .upgrade-delay-note{padding:6px 8px;font-size:10px;line-height:1.45}
+  .upgrade-delay-note strong{font-size:11px}
+}

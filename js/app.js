@@ -22,6 +22,8 @@
   }
   const Risk=window.HD_RISK;
   if(!Risk)throw Error('Risk simulation module not loaded');
+  const SessionUI=window.HD_SESSION_UI;
+  if(!SessionUI)throw Error('Session UI rules not loaded');
   const Spotlight=window.HD_SPOTLIGHT;
   if(!Spotlight)throw Error('Tutorial spotlight module not loaded');
   const canvas=document.getElementById('board'),ctx=canvas.getContext('2d');
@@ -29,7 +31,7 @@
   if(ctx&&typeof ctx.roundRect!=='function'){ctx.roundRect=function(x,y,w,h,r){const q=Math.min(Math.max(0,typeof r==='number'?r:8),Math.abs(w)/2,Math.abs(h)/2);this.moveTo(x+q,y);this.lineTo(x+w-q,y);this.quadraticCurveTo(x+w,y,x+w,y+q);this.lineTo(x+w,y+h-q);this.quadraticCurveTo(x+w,y+h,x+w-q,y+h);this.lineTo(x+q,y+h);this.quadraticCurveTo(x,y+h,x,y+h-q);this.lineTo(x,y+q);this.quadraticCurveTo(x,y,x+q,y);this.closePath();return this}}
   const $=id=>document.getElementById(id);
   let game={},lastTime=0,toastTimer=null,raf=0,visualT=0,hoverPad=-1;
-  let configuredWaveLimit=5;
+  let configuredWaveLimit=5,lastSyncedSP=NaN;
   let currentDrawer=null,drawerReturnFocus=null;
   let placement=null,hoverPreviewType=null; // pad/type are provisional until confirm; no SP spent yet.
   const TUTORIAL_STEPS=[
@@ -181,7 +183,7 @@
       leaksByKind:{},killsByKind:{},towerStats:{},
       spending:{purchase:0,upgrade:0,training:0,followUp:0,reporting:0,maintenance:0,bcp:0,refund:0},
       completedWaves:[]};
-    hoverPad=-1;placement=null;hoverPreviewType=null;lastTime=0;
+    hoverPad=-1;placement=null;hoverPreviewType=null;lastTime=0;lastSyncedSP=NaN;
     $('difficultySelect').disabled=false;
     addLog(`基本ルート ${activeRouteIndex+1}/5「${selected.name}」を選択。WAVE 3で中央、WAVE 5で病院付近から侵入経路が追加されます。`,'info');
     addLog('マップの設置地点を選び、射程を確認して防御を配置してください。','info');
@@ -375,7 +377,13 @@
     toast(`地点${i+1}：${label}を実施しました`);refreshUI();
   }
   function riskTag(t){return Risk.isOffline(t)?['停止中','danger']:t.pending?['更新待ち','warn']:t.supportLeft===0?['サポート切れ','warn']:t.health<40?['性能低下','warn']:['稼働中',''];}
-  function riskActionButton(label,disabled,fn){const b=document.createElement('button');b.className='btn';b.type='button';b.textContent=label;b.disabled=!!disabled;b.addEventListener('click',fn);return b}
+  function riskActionButton(label,disabled,fn,cost=null,blocked=false){
+    const b=document.createElement('button');
+    b.className='btn';b.type='button';b.textContent=label;b.disabled=!!disabled;
+    if(cost!==null){b.dataset.requiredSp=String(cost);b.dataset.baseDisabled=String(!!blocked)}
+    b.addEventListener('click',fn);
+    return b;
+  }
   function renderRisk(){
     const r=game.risk,active=game.towers.filter(Boolean),avg=active.length?Math.round(active.reduce((sum,t)=>sum+t.health,0)/active.length):null;
     const problems=active.filter(t=>Risk.isOffline(t)||t.pending||t.health<40||t.supportLeft===0).length;
@@ -389,7 +397,7 @@
     $('difficultySelect').disabled=!!tutorial?.active||game.wave>0||!!placement||game.towers.some(Boolean)||game.trainingLevel>0||r.reporting>0;
     const overview=$('riskOverview');overview.innerHTML=`<div class="risk-kpi"><small>難易度</small><strong>${Risk.profile(r).name}</strong><span>進行中は変更不可</span></div>
       <div class="risk-kpi"><small>次ウェーブの想定事故確率</small><strong>${chance}%</strong><span>1ウェーブにつき最大1回</span></div>
-      <div class="risk-kpi"><small>運用予算（残SP）</small><strong>${money(game.sp)} SP</strong><span>設備・保守・研修で共通</span></div>
+      <div class="risk-kpi"><small>運用予算（残SP）</small><strong id="riskBudgetValue">${money(game.sp)} SP</strong><span>設備・保守・研修で共通</span></div>
       <div class="risk-kpi"><small>事故・強化遅延</small><strong>${r.incidents} / ${r.upgradeDelays}</strong><span>発生回数 / 遅延回数</span></div>`;
     const reportCost=reportingCost();
     $('reportingBtn').disabled=r.mode==='easy'||r.reporting>=3||game.sp<reportCost||finished;
@@ -402,7 +410,18 @@
       const sub=document.createElement('small');sub.textContent=`実効Lv.${Risk.effectiveLevel(t)} ・ 健全度 ${t.health}%`;name.append(b,sub);
       const tag=document.createElement('span');tag.className=`risk-tag ${tone}`;tag.textContent=state;head.append(name,tag);card.append(head);
       const bar=document.createElement('div');bar.className='risk-healthbar';const fill=document.createElement('i');fill.style.width=t.health+'%';fill.className=t.health<30?'danger':t.health<65?'warn':'';bar.append(fill);card.append(bar);
-      const extra=document.createElement('div');extra.className='risk-extra';extra.textContent=`サポート：${t.supportLeft===0?'期限切れ':`残り${t.supportLeft}ウェーブ`} ｜ 予防保守：${t.preventive}ウェーブ ｜ ${t.pending?'強化作業が次のウェーブ終了時に完了':'更新作業なし'}`;card.append(extra);
+      const timing=SessionUI.pendingTiming(game,t,Risk.PENDING_FACTOR);
+      const extra=document.createElement('div');extra.className='risk-extra';
+      extra.textContent=`サポート：${t.supportLeft===0?'期限切れ':`残り${t.supportLeft}ウェーブ`} ｜ 予防保守：${t.preventive}ウェーブ ｜ ${timing?'強化自動完了：'+timing.autoLabel:'更新作業なし'}`;
+      card.append(extra);
+      if(timing){
+        const delay=document.createElement('div');delay.className='upgrade-delay-note';
+        delay.innerHTML=`<strong>更新待ち：Lv.${t.level} → Lv.${timing.targetLevel}</strong>
+          <div>実効Lv.${Risk.effectiveLevel(t)} ／ 更新待ち期間の効率 ×${Math.round(Risk.PENDING_FACTOR*100)}%（約${timing.penaltyPercent}%低下）</div>
+          <div>無料：${timing.autoLabel}</div>
+          <div>有料：追加検証 ${Risk.expediteCost(t)} SPで即時完了・待機ペナルティ解除</div>`;
+        card.append(delay);
+      }
       const change=document.createElement('div');change.className='risk-extra';
       const impact=Risk.isOffline(t)?'現在は停止中':t.supportLeft===0?'次のウェーブもサポート切れによる性能低下':t.health<35?'実効Lv.が1下がる状態':t.health<70?'健全度に応じて対応強度が低下':'現在は通常稼働';
       const next=t.supportLeft===1?'次のウェーブ終了時にサポート期限到達の見込み。':t.health<50?'保守による健全度回復を検討。':'予防保守で次の自然劣化を抑制可能。';
@@ -410,10 +429,10 @@
       card.append(change);
       const acts=document.createElement('div');acts.className='risk-actions';
       const maint=Risk.maintenanceCost(t,TOWERS),pre=Risk.preventiveCost(t,TOWERS),support=Risk.renewalCost(t,TOWERS);
-      acts.append(riskActionButton(`${Risk.isOffline(t)?'応急':'定期'}保守 ${maint}SP`,finished||r.mode==='easy'||t.health>=100||game.sp<maint,()=>serviceTower(i,'maintenance')));
-      acts.append(riskActionButton(`予防保守 ${pre}SP`,finished||r.mode==='easy'||t.preventive>=2||game.sp<pre,()=>serviceTower(i,'preventive')));
-      acts.append(riskActionButton(`サポート更新 ${support}SP`,finished||r.mode==='easy'||t.supportLeft>=Risk.profile(r).support||game.sp<support,()=>serviceTower(i,'support')));
-      if(t.pending){const exp=Risk.expediteCost(t);acts.append(riskActionButton(`追加検証 ${exp}SP`,finished||game.sp<exp,()=>serviceTower(i,'expedite')))}
+      acts.append(riskActionButton(`${Risk.isOffline(t)?'応急':'定期'}保守 ${maint}SP`,finished||r.mode==='easy'||t.health>=100||game.sp<maint,()=>serviceTower(i,'maintenance'),maint,finished||r.mode==='easy'||t.health>=100));
+      acts.append(riskActionButton(`予防保守 ${pre}SP`,finished||r.mode==='easy'||t.preventive>=2||game.sp<pre,()=>serviceTower(i,'preventive'),pre,finished||r.mode==='easy'||t.preventive>=2));
+      acts.append(riskActionButton(`サポート更新 ${support}SP`,finished||r.mode==='easy'||t.supportLeft>=Risk.profile(r).support||game.sp<support,()=>serviceTower(i,'support'),support,finished||r.mode==='easy'||t.supportLeft>=Risk.profile(r).support));
+      if(t.pending){const exp=Risk.expediteCost(t);acts.append(riskActionButton(`追加検証・即時完了 ${exp}SP`,finished||game.sp<exp,()=>serviceTower(i,'expedite'),exp,finished))}
       card.append(acts);list.append(card)
     });
   }
@@ -431,7 +450,7 @@
       const active=placement?.type===id;
       btn.className='shop-item'+(active?' active':'')+(game.sp<t.cost?' is-unaffordable':'');
       btn.setAttribute('aria-pressed',String(!!active));
-      btn.innerHTML=`<span class="shop-icon">${iconSVG[t.icon]}</span><span class="shop-main"><span class="shop-name">${t.name}</span><span class="shop-desc">${t.desc}</span><span class="shop-extra">射程 <span class="shop-range">${t.range}</span> / Lv.1 ・ 最大Lv.3${game.sp<t.cost?' <span class="shop-warning">（SP不足）</span>':''}</span><span class="shop-range-meter" aria-hidden="true"><i style="width:${Math.round(t.range/180*100)}%;background:${t.color}"></i></span></span><span class="price">${t.cost}<span>SP</span></span><span class="shop-hotkey">${idx+1}</span>`;
+      btn.innerHTML=`<span class="shop-icon">${iconSVG[t.icon]}</span><span class="shop-main"><span class="shop-name">${t.name}</span><span class="shop-desc">${t.desc}</span><span class="shop-extra">射程 <span class="shop-range">${t.range}</span> / Lv.1 ・ 最大Lv.3 <span class="shop-warning"${game.sp<t.cost?'':' hidden'}>（SP不足）</span></span><span class="shop-range-meter" aria-hidden="true"><i style="width:${Math.round(t.range/180*100)}%;background:${t.color}"></i></span></span><span class="price">${t.cost}<span>SP</span></span><span class="shop-hotkey">${idx+1}</span>`;
       // On desktop, hovering a candidate previews the coverage even while the shop is open.
       btn.addEventListener('pointerenter',()=>{if(placement?.pad>=0){hoverPreviewType=id;btn.dataset.preview='true'}});
       btn.addEventListener('pointerleave',()=>{hoverPreviewType=null;btn.dataset.preview='false'});
@@ -448,7 +467,14 @@
     const metrics=document.createElement('div');metrics.className='detail-metrics';metrics.innerHTML=`<div class="metric"><small>対応強度</small><b>${Math.round(s.damage)}</b></div><div class="metric"><small>対応範囲</small><b>${Math.round(s.range)}</b></div><div class="metric"><small>対応間隔</small><b>${s.rate.toFixed(2)}s</b></div>`;detail.append(metrics);
     const r=game.risk,explain=document.createElement('div');explain.className='risk-detail-status';
     const [tag]=riskTag(tower),chance=Math.round(Risk.upgradeChance(r,tower)*100);
-    explain.innerHTML=`<strong>運用状態：${tag}</strong><div>健全度 ${tower.health}% ｜ 実効Lv.${s.effectiveLevel} ｜ 防御効率 ${Math.round(s.impact*100)}%</div><div>サポート ${tower.supportLeft===0?'期限切れ':`残${tower.supportLeft}ウェーブ`} ／ 予防保守 ${tower.preventive}ウェーブ</div><div>強化即時成功率：${tower.pending?'更新待ち':chance+'%'}（遅延時も費用は支払済み・追加請求なし）</div></div>`;
+    const pendingInfo=SessionUI.pendingTiming(game,tower,Risk.PENDING_FACTOR);
+    const delayDetails=pendingInfo
+      ?`<div class="upgrade-delay-note"><strong>強化申請済み：Lv.${tower.level} → Lv.${pendingInfo.targetLevel}</strong>
+          <div>現在の実効Lv.${s.effectiveLevel} ／ 更新待ち期間は防御効率 ×${Math.round(Risk.PENDING_FACTOR*100)}%（約${pendingInfo.penaltyPercent}%低下、他の状態の影響を除く）</div>
+          <div>無料で待つ：${pendingInfo.autoLabel}</div>
+          <div>追加検証：${Risk.expediteCost(tower)} SPで即時にLv.${pendingInfo.targetLevel}となり、更新待ちによる性能低下を解除</div></div>`
+      :`<div>強化即時成功率：${chance}% ／ 遅延時は既払いのSPを再請求せずウェーブ終了時に完了</div>`;
+    explain.innerHTML=`<strong>運用状態：${tag}</strong><div>健全度 ${tower.health}% ｜ 実効Lv.${s.effectiveLevel} ｜ 防御効率 ${Math.round(s.impact*100)}%</div><div>サポート ${tower.supportLeft===0?'期限切れ':`残${tower.supportLeft}ウェーブ`} ／ 予防保守 ${tower.preventive}ウェーブ</div>${delayDetails}</div>`;
     detail.append(explain);
     const why=document.createElement('p');why.className='risk-explanation';
     why.textContent='直近の状態変化：'+(tower.lastChange||'記録なし')+'。'+(Risk.isOffline(tower)?'停止中のため応急保守が必要です。':tower.supportLeft===0?'サポート更新を検討してください。':'次ウェーブの自然劣化を予防保守で抑えられます。');
@@ -459,12 +485,34 @@
     const maintenance=document.createElement('div');maintenance.className='risk-detail-actions';
     const mCost=Risk.maintenanceCost(tower,TOWERS),pCost=Risk.preventiveCost(tower,TOWERS),sCost=Risk.renewalCost(tower,TOWERS);
     const easy=r.mode==='easy';
-    maintenance.append(riskActionButton(`保守 ${mCost}SP`,easy||tower.health>=100||game.sp<mCost||['won','lost'].includes(game.phase),()=>serviceTower(pad,'maintenance')),
-      riskActionButton(`予防保守 ${pCost}SP`,easy||tower.preventive>=2||game.sp<pCost||['won','lost'].includes(game.phase),()=>serviceTower(pad,'preventive')),
-      riskActionButton(`サポート更新 ${sCost}SP`,easy||tower.supportLeft>=Risk.profile(r).support||game.sp<sCost||['won','lost'].includes(game.phase),()=>serviceTower(pad,'support')));
-    if(tower.pending){const extra=Risk.expediteCost(tower);maintenance.append(riskActionButton(`追加検証 ${extra}SP`,game.sp<extra||['won','lost'].includes(game.phase),()=>serviceTower(pad,'expedite')))}
+    maintenance.append(riskActionButton(`保守 ${mCost}SP`,easy||tower.health>=100||game.sp<mCost||['won','lost'].includes(game.phase),()=>serviceTower(pad,'maintenance'),mCost,easy||tower.health>=100||['won','lost'].includes(game.phase)),
+      riskActionButton(`予防保守 ${pCost}SP`,easy||tower.preventive>=2||game.sp<pCost||['won','lost'].includes(game.phase),()=>serviceTower(pad,'preventive'),pCost,easy||tower.preventive>=2||['won','lost'].includes(game.phase)),
+      riskActionButton(`サポート更新 ${sCost}SP`,easy||tower.supportLeft>=Risk.profile(r).support||game.sp<sCost||['won','lost'].includes(game.phase),()=>serviceTower(pad,'support'),sCost,easy||tower.supportLeft>=Risk.profile(r).support||['won','lost'].includes(game.phase)));
+    if(tower.pending){const extra=Risk.expediteCost(tower);maintenance.append(riskActionButton(`追加検証・即時完了 ${extra}SP`,game.sp<extra||['won','lost'].includes(game.phase),()=>serviceTower(pad,'expedite'),extra,['won','lost'].includes(game.phase)))}
     detail.append(maintenance)
 
+  }
+  function syncLiveEconomy(force=false){
+    if(!Number.isFinite(game.sp)||(!force&&game.sp===lastSyncedSP))return;
+    lastSyncedSP=game.sp;
+    // The top HUD, risk panel, placement preview and purchase availability
+    // all display this same canonical game.sp value.
+    SessionUI.syncWalletDOM(document,game.sp,TOWERS);
+    const finished=game.phase==='won'||game.phase==='lost';
+    $('bcpBtn').disabled=finished||game.sp<BCP_COST||game.integrity>=100||game.bcpUsed||!!tutorial?.active;
+    const lv=game.trainingLevel;
+    $('trainingBtn').disabled=lv>=3||game.sp<TRAINING_COSTS[lv]||finished;
+    const r=game.risk;
+    $('followUpBtn').disabled=lv===0||r.mode==='easy'||game.sp<80||(r.adherence>=100&&r.effectiveTraining>=lv)||finished;
+    const reportCost=reportingCost();
+    $('reportingBtn').disabled=r.mode==='easy'||r.reporting>=3||game.sp<reportCost||finished;
+    const selected=game.selectedPad>=0?game.towers[game.selectedPad]:null;
+    const upgrade=$('detail').querySelector('.detail-actions .btn-primary');
+    if(upgrade&&selected){
+      const cost=TOWERS[selected.type].upgrade[selected.level-1];
+      upgrade.disabled=selected.level>=MAX_LEVEL||!!selected.pending||game.sp<cost||finished;
+    }
+    if(placement)renderPlacementBar();
   }
   function refreshUI(){
     $('waveLimitValue').textContent=game.waveLimit;
@@ -484,9 +532,12 @@
     $('bcpBtn').disabled=finished||game.sp<BCP_COST||game.integrity>=100||game.bcpUsed;$('bcpBtn').textContent=game.bcpUsed?'✓ BCP使用済み':`▣ BCP発動（${BCP_COST} SP）`;
     const current=WAVE_DEFS[game.wave-1],upcoming=WAVE_DEFS[game.wave];
     $('waveLabel').textContent=tutorialDone?'練習完了：メニューへ戻る':active?`進行中：${current.title}`:game.phase==='intermission'&&upcoming?`次：${upcoming.title}`:game.phase==='won'?'全ウェーブ防衛完了':game.phase==='lost'?'病院の防衛機能が停止':upcoming?`次：${upcoming.title}`:'最終結果';
+    if(!active&&!finished&&!tutorialDone&&game.wave+1===5){
+      $('waveLabel').textContent+=game.waveLimit===7?'（7 WAVE中間報酬 +170 SP）':'（5 WAVE最終戦・報酬 0 SP）';
+    }
     $('waveCounter').textContent=tutorialDone?'1 / 1 完了':active?`${game.spawned} / ${game.spawnTotal} 出現・残 ${game.enemies.length}`:game.phase==='intermission'?`${game.wave} / ${game.waveLimit} クリア`:game.phase==='won'?`${game.waveLimit} / ${game.waveLimit}`:game.phase==='lost'?`${game.wave} / ${game.waveLimit}`:`0 / ${game.waveLimit}`;
     $('waveProgress').style.width=(tutorialDone?100:active&&game.spawnTotal?game.spawned/game.spawnTotal*100:game.phase==='won'?100:0)+'%';
-    renderShop();renderDetail();renderMobilePads();renderQuickTower();renderTraining();syncPadButtons();renderPlacementBar();renderRisk();
+    renderShop();renderDetail();renderMobilePads();renderQuickTower();renderTraining();syncPadButtons();renderPlacementBar();renderRisk();syncLiveEconomy(true);
     // Landscape control rail mirrors the existing HUD values without changing game logic.
     for(const [from,to] of [['riskChance','sideRiskChance'],['riskHealth','sideRiskHealth'],['riskAdherence','sideRiskAdherence'],['riskProblems','sideRiskProblems']]){
       $(to).textContent=$(from).textContent;
@@ -500,15 +551,26 @@
     game.sp-=cost;game.spending.upgrade+=cost;t.invested+=cost;
     const outcome=Risk.doUpgrade(game.risk,t,cost);
     if(outcome.succeed){addLog(`${TOWERS[t.type].short}をLv.${t.level}に強化（-${cost} SP）`);toast('設備の強化が完了しました')}
-    else{addLog(`地点${i+1}：更新作業に遅延が発生。強化費用${cost} SPは支払済み。次ウェーブ後に完了`,'warn');toast('導入トラブル：追加の費用なしで次ウェーブ終了後に完了')}
+    else{
+      const timing=SessionUI.pendingTiming(game,t,Risk.PENDING_FACTOR);
+      addLog(`地点${i+1}：更新遅延。強化費用${cost} SPは支払済み、WAVE ${timing.wave}終了時に追加費用なしで自動完了`,'warn');
+      toast(`更新遅延：WAVE ${timing.wave}終了時に無料完了。追加検証${Risk.expediteCost(t)} SPなら即時完了`);
+    }
     if(isGuided('upgrade')){closeDrawer({restoreFocus:false});tutorialSetStep('educationOpen')}refreshUI()
   }
   function sellTower(i){if(tutorial?.active){toast('操作練習では売却せずに進めてください');return}const t=game.towers[i];if(!t)return;const amount=Math.round(t.invested*.65);game.sp+=amount;game.spending.refund+=amount;addLog(`${TOWERS[t.type].name}を売却（+${amount} SP）`);game.towers[i]=null;game.selectedPad=-1;refreshUI()}
+  function waveClearBonus(waveNumber=game.wave){
+    return SessionUI.waveBonus(waveNumber,game.waveLimit,WAVE_DEFS);
+  }
   function startWave(){
     if(tutorial?.active&&!tutorialPermit('wave'))return;
     if(placement||!(game.phase==='ready'||game.phase==='intermission')||game.wave>=game.waveLimit)return;
     game.wave++;
     const wave=WAVE_DEFS[game.wave-1];
+    if(game.wave===5&&!tutorial?.active){
+      const amount=waveClearBonus(5);
+      addLog(`WAVE 5突破報酬：+${amount} SP（${game.waveLimit===5?'5 WAVEモードの最終戦':'7 WAVEモードの中間戦'}）`,'info');
+    }
     game.phase='active';
     game.queue=(isGuided('waveReady')?['phish','phish','auth','phish']:wave.units.slice());
     game.spawned=0;
@@ -605,10 +667,10 @@
         const impact=s.damage*(base.vs[target.kind]||1)*(special?1+lv*.22:1);const actualDamage=Math.min(target.hp,impact);target.hp-=impact;target.flash=.14;const stats=game.towerStats[tower.type]||(game.towerStats[tower.type]={shots:0,kills:0,damage:0});stats.shots++;stats.damage+=Math.max(0,actualDamage);if(base.slow)target.slowLeft=Math.max(target.slowLeft,base.slow+lv*.48);game.effects.push({type:'beam',from:{x:pad.x,y:pad.y},to:ep,color:base.color,life:.16,max:.16});if(target.hp<=0){game.enemies.splice(game.enemies.indexOf(target),1);const targetInfo=ENEMIES[target.kind];game.sp+=targetInfo.reward;game.score+=targetInfo.reward*10;game.kills++;stats.kills++;game.killsByKind[target.kind]=(game.killsByKind[target.kind]||0)+1;if(game.selectedPad>=0){renderDetail();renderQuickTower()}renderTraining();$('bcpBtn').disabled=game.bcpUsed||game.integrity>=100||game.sp<BCP_COST;game.effects.push({type:'burst',x:ep.x,y:ep.y,color:targetInfo.color,life:.47,max:.47});}}
       else tower.cooldown=0;
     }
-    if(game.spawnIndex>=game.queue.length&&game.waveEvents.every(e=>e.fired)&&game.enemies.length===0){game.sp+=wave.bonus;game.score+=Math.round((game.integrity+game.privacy)*6);
+    if(game.spawnIndex>=game.queue.length&&game.waveEvents.every(e=>e.fired)&&game.enemies.length===0){const clearBonus=waveClearBonus();game.sp+=clearBonus;game.score+=Math.round((game.integrity+game.privacy)*6);
       const changes=tutorial?.active?[]:Risk.advanceWave(game.risk,game.towers);
-      addLog(`WAVE ${game.wave} 突破！ ボーナス +${wave.bonus} SP`);
-      for(const change of changes)addLog(change,'warn');game.completedWaves.push({wave:game.wave,integrity:game.integrity,privacy:game.privacy,score:game.score});if(isGuided('waveActive')){game.phase='intermission';tutorialSetStep('complete');toast('操作練習を修了しました！ メニューへ戻って本編を始めましょう。')}else if(game.wave===game.waveLimit)finish(true);else{game.phase='intermission';toast(`WAVE ${game.wave} クリア！ +${wave.bonus} SP：設備を強化して次へ`)}refreshUI()}
+      addLog(`WAVE ${game.wave} 突破！ ボーナス +${clearBonus} SP`);
+      for(const change of changes)addLog(change,'warn');game.completedWaves.push({wave:game.wave,integrity:game.integrity,privacy:game.privacy,score:game.score});if(isGuided('waveActive')){game.phase='intermission';tutorialSetStep('complete');toast('操作練習を修了しました！ メニューへ戻って本編を始めましょう。')}else if(game.wave===game.waveLimit)finish(true);else{game.phase='intermission';toast(`WAVE ${game.wave} クリア！ +${clearBonus} SP：設備を強化して次へ`)}refreshUI()}
   }
   function finish(success){game.phase=success?'won':'lost';game.paused=false;if(success){game.score+=Math.round(game.integrity*15+game.privacy*15);addLog('最終ウェーブ突破！病院の防衛成功。')}else addLog('診療継続度または情報保護度が0になりました。','danger');refreshUI();showResult(success)}
   function fitCanvas(){if(!ctx)return;const rect=canvas.getBoundingClientRect();if(!rect.width)return;const ratio=Math.min(2.5,window.devicePixelRatio||1);canvas.width=Math.round(rect.width*ratio);canvas.height=Math.round(rect.width*H/W*ratio);ctx.setTransform(canvas.width/W,0,0,canvas.height/H,0,0)}
@@ -733,7 +795,7 @@
     else if(game.paused&&placement){roundRect(15,53,207,27,7,'#1a4850d9','#48d9c7',1);text('配置中は自動一時停止',26,67,'#b2faec',11,'left',800)}
   }
   function render(){if(!ctx)return;ctx.clearRect(0,0,W,H);drawBackground();drawPath();drawSideRoute();drawGoal();drawPads();drawEnemies();drawPlacementPreview();drawEffects();drawHUD()}
-  function frame(ts){if($('gameShell').hidden){lastTime=ts;raf=requestAnimationFrame(frame);return}if(!lastTime)lastTime=ts;const dt=Math.min(.065,Math.max(0,(ts-lastTime)/1000));lastTime=ts;update(dt);render();if(game.phase==='active'&&!game.paused&&ts%180<17){ // cheap HUD updates between expensive DOM changes
+  function frame(ts){if($('gameShell').hidden){lastTime=ts;raf=requestAnimationFrame(frame);return}if(!lastTime)lastTime=ts;const dt=Math.min(.065,Math.max(0,(ts-lastTime)/1000));lastTime=ts;update(dt);syncLiveEconomy();render();if(game.phase==='active'&&!game.paused&&ts%180<17){ // cheap HUD updates between expensive DOM changes
       $('spValue').textContent=money(game.sp);$('scoreValue').textContent=money(game.score);$('waveCounter').textContent=`${game.spawned} / ${game.spawnTotal} 出現・残 ${game.enemies.length}`;$('waveProgress').style.width=(game.spawnTotal?100*game.spawned/game.spawnTotal:0)+'%';
     }
     raf=requestAnimationFrame(frame)}
@@ -742,8 +804,32 @@
   function moveHover(e){const rect=canvas.getBoundingClientRect(),x=(e.clientX-rect.left)/rect.width*W,y=(e.clientY-rect.top)/rect.height*H;let near=-1,dist=30;for(let i=0;i<PADS.length;i++){const d=Math.hypot(PADS[i].x-x,PADS[i].y-y);if(d<dist){dist=d;near=i}}hoverPad=near;canvas.style.cursor=near>=0?'pointer':'crosshair'}
   let lastFocus=null;
   function closeModal(){const backdrop=$('modalBackdrop');backdrop.classList.remove('open');backdrop.dataset.restorePause='0';if(lastFocus&&lastFocus.isConnected)lastFocus.focus();if(tutorial?.active)tutorialRender();else Spotlight.hide()}
-  function openModal(title,bodyHTML,buttons,closable=true){Spotlight.suspend();$('modalBackdrop').dataset.restorePause='0';lastFocus=document.activeElement;$('modalTitle').textContent=title;$('modalBody').innerHTML=bodyHTML;$('modalButtons').innerHTML='';$('modalClose').style.visibility=closable?'visible':'hidden';for(const b of buttons){const btn=document.createElement('button');btn.className='btn '+(b.primary?'btn-primary':'');btn.textContent=b.label;btn.addEventListener('click',()=>{closeModal();b.action?.()});$('modalButtons').append(btn)}$('modalBackdrop').classList.add('open');$('modalButtons').querySelector('button')?.focus()}
-  function showHelp(){if(placement)cancelPlacement({quiet:true});closeDrawer({restoreFocus:false});const wasActive=game.phase==='active'&&!game.paused;if(wasActive)game.paused=true;refreshUI();openModal('遊び方・作戦ガイド',`<p>あなたは架空の病院の防衛担当者。<strong>診療継続度と情報保護度を保ちながら、${game.waveLimit}ウェーブを突破</strong>してください。</p><ul><li>マップ上の <strong>空き地点＋</strong> を押すとその地点のショップが開きます。設備を選び、<strong>カバー範囲の円を確認してから「設置確定」</strong>してください</li><li>ショップボタンから先に設備を選ぶ方法も利用できます。仮配置の段階ではSPは消費されません</li><li><strong>▶ ウェーブ開始</strong>で敵が出現。設備は自動で迎撃</li><li>撃退でSPを獲得。<strong>どの防御設備も</strong>配置地点を再度タップしてLv.3まで強化できます</li><li>配置済みの設備をタップすると <strong>強化スライドパネル</strong> が開きます（最大Lv.3）</li><li><strong>ショップ／強化／職員教育／ログ</strong> は上部ボタンから開閉でき、Escでも閉じられます</li><li>メール対策はフィッシング、MFAは認証系、EDRはマルウェアに強い</li><li>ネットワーク分離は敵の進行を一時的に遅くします</li><li>第2ウェーブ以降、手順逸脱を想定した人的リスクが<strong>マップ途中に突然出現</strong>します</li><li>基本進行ルートは<strong>5つからプレイ開始時にランダム決定</strong>され、設置場所も経路に合わせて変化します。第3ウェーブで中央の侵入口、第5ウェーブで病院システムに近い侵入口が追加されます</li><li><strong>職員教育（全体強化）</strong>で人的リスク型の侵攻が遅くなります</li><li>BCPは診療継続度のみ一部回復（ウェーブごとに1回まで）</li><li>設備は65%返金で売却可能。途中で一時停止・倍速もできます</li><li><strong>運用管理</strong>：NORMAL/HARDでは設備の健全度がウェーブごとに低下し、保守・予防保守・サポート更新が必要です</li><li>強化は成功が保証されず、遅延した場合は次ウェーブの終了後に完了します（追加検証で即時完了も可能）</li><li>職員教育の効果は定着度に依存します。フォローアップ研修・報告体制の改善で効果を維持してください</li><li><strong>次ウェーブの事故リスク</strong>は運用管理で確認でき、予防措置で確率を下げられます</li><li><strong>Wi-Fi特殊イベント</strong>：5ウェーブではWAVE 4、7ウェーブではWAVE 6に、認証情報が悪用された不審な無線LAN接続が発生する場合があります。接続異常の警告が出たら中央経路をカバーするネットワーク分離・EDRと、教育・報告体制を確認してください。イベントそのものでは直接被害は発生せず、防衛を突破した敵のみが影響します</li></ul><p style="font-size:11px">※ このゲームは教育向けに対策効果を抽象化しています。実際のサイバー攻撃手順や病院の設備構成は再現していません。</p>`,[{label:'ゲームに戻る',primary:true,action:()=>{if(wasActive){game.paused=false;refreshUI()}}}],true);
+  function openModal(title,bodyHTML,buttons,closable=true,focusHeading=false){
+    Spotlight.suspend();
+    $('modalBackdrop').dataset.restorePause='0';
+    lastFocus=document.activeElement;
+    $('modalTitle').textContent=title;
+    $('modalBody').innerHTML=bodyHTML;
+    $('modalButtons').innerHTML='';
+    $('modalClose').style.visibility=closable?'visible':'hidden';
+    for(const b of buttons){
+      const btn=document.createElement('button');
+      btn.className='btn '+(b.primary?'btn-primary':'');
+      btn.textContent=b.label;
+      btn.addEventListener('click',()=>{closeModal();b.action?.()});
+      $('modalButtons').append(btn);
+    }
+    $('modalBackdrop').classList.add('open');
+    const dialog=$('modalBackdrop').querySelector('.modal');
+    dialog.scrollTop=0;
+    if(focusHeading){
+      // A result can be taller than the viewport. Avoid auto-scrolling to its
+      // bottom actions and deliberately start at the title / summary.
+      $('modalTitle').focus({preventScroll:true});
+      dialog.scrollTop=0;
+    }else $('modalButtons').querySelector('button')?.focus({preventScroll:true});
+  }
+  function showHelp(){if(placement)cancelPlacement({quiet:true});closeDrawer({restoreFocus:false});const wasActive=game.phase==='active'&&!game.paused;if(wasActive)game.paused=true;refreshUI();openModal('遊び方・作戦ガイド',`<p>あなたは架空の病院の防衛担当者。<strong>診療継続度と情報保護度を保ちながら、${game.waveLimit}ウェーブを突破</strong>してください。</p><ul><li>マップ上の <strong>空き地点＋</strong> を押すとその地点のショップが開きます。設備を選び、<strong>カバー範囲の円を確認してから「設置確定」</strong>してください</li><li>ショップボタンから先に設備を選ぶ方法も利用できます。仮配置の段階ではSPは消費されません</li><li><strong>▶ ウェーブ開始</strong>で敵が出現。設備は自動で迎撃</li><li>撃退でSPを獲得。<strong>どの防御設備も</strong>配置地点を再度タップしてLv.3まで強化できます</li><li>配置済みの設備をタップすると <strong>強化スライドパネル</strong> が開きます（最大Lv.3）</li><li><strong>ショップ／強化／職員教育／ログ</strong> は上部ボタンから開閉でき、Escでも閉じられます</li><li>メール対策はフィッシング、MFAは認証系、EDRはマルウェアに強い</li><li>ネットワーク分離は敵の進行を一時的に遅くします</li><li>第2ウェーブ以降、手順逸脱を想定した人的リスクが<strong>マップ途中に突然出現</strong>します</li><li>基本進行ルートは<strong>5つからプレイ開始時にランダム決定</strong>され、設置場所も経路に合わせて変化します。第3ウェーブで中央の侵入口、第5ウェーブで病院システムに近い侵入口が追加されます</li><li><strong>職員教育（全体強化）</strong>で人的リスク型の侵攻が遅くなります</li><li>BCPは診療継続度のみ一部回復（ウェーブごとに1回まで）</li><li>設備は65%返金で売却可能。途中で一時停止・倍速もできます</li><li><strong>運用管理</strong>：NORMAL/HARDでは設備の健全度がウェーブごとに低下し、保守・予防保守・サポート更新が必要です</li><li><strong>強化遅延</strong>：WAVE中の申請はそのWAVE終了時、WAVE間の申請は次のWAVE終了時に無料で自動完了します。待機中は防御効率が約14%低下し、追加検証で即時完了できます</li><li>職員教育の効果は定着度に依存します。フォローアップ研修・報告体制の改善で効果を維持してください</li><li><strong>次ウェーブの事故リスク</strong>は運用管理で確認でき、予防措置で確率を下げられます</li><li><strong>WAVE 5突破報酬</strong>：5 WAVEの最終戦では0 SP、7 WAVEの中間戦では170 SPです。敵撃退によるSPとは別に加算されます</li><li><strong>Wi-Fi特殊イベント</strong>：5ウェーブではWAVE 4、7ウェーブではWAVE 6に、認証情報が悪用された不審な無線LAN接続が発生する場合があります。接続異常の警告が出たら中央経路をカバーするネットワーク分離・EDRと、教育・報告体制を確認してください。イベントそのものでは直接被害は発生せず、防衛を突破した敵のみが影響します</li></ul><p style="font-size:11px">※ このゲームは教育向けに対策効果を抽象化しています。実際のサイバー攻撃手順や病院の設備構成は再現していません。</p>`,[{label:'ゲームに戻る',primary:true,action:()=>{if(wasActive){game.paused=false;refreshUI()}}}],true);
     // Restore pause state when closing by backdrop or ×, too.
     $('modalBackdrop').dataset.restorePause=wasActive?'1':'0';}
   function showResult(win){
@@ -767,7 +853,7 @@
       {label:'同じ設定でもう一度',primary:true,action:resetGame},
       {label:'メニューへ戻る',action:returnToMenuNow},
       {label:'盤面を確認',action:()=>{}}
-    ],true);
+    ],true,true);
   }
   function doRestart(){if(tutorial?.active){startTutorial();return}if(placement)cancelPlacement({quiet:true});closeDrawer({restoreFocus:false});if(game.phase==='ready'&&game.towers.every(t=>!t)){resetGame();return}const resume=game.phase==='active'&&!game.paused;if(resume){game.paused=true;refreshUI()}openModal('ゲームを最初からやり直しますか？','<p>配置した設備、ポイント、スコア、進行状況はすべて初期化されます。</p>',[{label:'初期化する',primary:true,action:resetGame},{label:'キャンセル',action:()=>{if(resume){game.paused=false;refreshUI()}}}]);$('modalBackdrop').dataset.restorePause=resume?'1':'0'}
   function beginSession(mode,waves,tutorialMode=false){

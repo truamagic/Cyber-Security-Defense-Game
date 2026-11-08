@@ -9,6 +9,7 @@
     hard:   {name:'HARD',  label:'高難度',wear:[10,16],incident:.39,upgrade:.71,trainingDecay:[4,9],support:3,startingAdherence:60}
   });
   const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
+  const PENDING_FACTOR=.86;
   function fresh(mode='normal') {
     const key=MODES[mode]?mode:'normal';
     return {mode:key,adherence:MODES[key].startingAdherence,effectiveTraining:0,trainingFailures:0,reporting:0,
@@ -25,7 +26,7 @@
   function efficiency(t){if(!t)return 1;if(isOffline(t))return 0;
     const health=clamp(t.health??100,0,100);
     const fatigue=.58+.42*health/100;
-    return fatigue*(t.supportLeft===0?.74:1)*(t.pending?.86:1);
+    return fatigue*(t.supportLeft===0?.74:1)*(t.pending?PENDING_FACTOR:1);
   }
   function upgradeChance(r,t){const m=profile(r);if(r.mode==='easy')return 1;
     return clamp(m.upgrade+((t.health??100)-75)*.002+(t.preventive>0?.07:0)+(t.supportLeft===0?-.11:0),.43,.98);
@@ -166,7 +167,7 @@
     const chance=clamp(.04+Math.min(trainingLevel,r.effectiveTraining)*(r.adherence/100)*.095+r.reporting*.06,0,.58);
     if(rand(r)<chance){r.preventedHuman++;return true}return false;
   }
-  window.HD_RISK=Object.freeze({MODES,profile,fresh,rand,between,clamp,createTower,
+  window.HD_RISK=Object.freeze({MODES,PENDING_FACTOR,profile,fresh,rand,between,clamp,createTower,
     isOffline,effectiveLevel,efficiency,upgradeChance,maintenanceCost,preventiveCost,renewalCost,expediteCost,
     educationSpeed,boostEducation,followUp,incidentRisk,planIncident,wifiEventEligible,wifiDefense,resolveWifiIncident,applyIncident,
     doUpgrade,doMaintenance,doPreventive,doRenewal,advanceWave,preventHuman});

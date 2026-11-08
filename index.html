@@ -68,7 +68,7 @@
 <div class="shell" id="gameShell" hidden>
   <header class="header">
     <div class="brand-mark" aria-hidden="true"><img src="./assets/hospital-defense-icon.png" width="52" height="52" alt="" decoding="async"></div>
-    <div class="brand-copy"><div class="eyebrow">CYBERSECURITY TOWER DEFENSE</div><h1>HOSPITAL <span>DEFENSE</span> <span class="version">C / RISK 4.6</span></h1></div>
+    <div class="brand-copy"><div class="eyebrow">CYBERSECURITY TOWER DEFENSE</div><h1>HOSPITAL <span>DEFENSE</span> <span class="version">C / RISK 4.7</span></h1></div>
     <div class="header-right">
       <span class="header-note"><span class="live-dot"></span> OFFLINE MODE / 通信なし</span>
       <select id="difficultySelect" hidden aria-hidden="true"><option value="easy">EASY</option><option value="normal" selected>NORMAL</option><option value="hard">HARD</option></select>
@@ -177,13 +177,14 @@
   </div>
   <div class="drawer-footer"><span class="live-dot" aria-hidden="true"></span> OFFLINE / ゲームはパネル表示中も進行します。必要に応じて一時停止してください。</div>
 </aside>
-<div class="modal-backdrop" id="modalBackdrop" role="presentation"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-top"><div class="modal-icon" id="modalIcon" aria-hidden="true">✦</div><button class="btn" id="modalClose" type="button" aria-label="閉じる">×</button></div><h2 id="modalTitle">遊び方</h2><div id="modalBody"></div><div class="modal-buttons" id="modalButtons"></div></div></div>
+<div class="modal-backdrop" id="modalBackdrop" role="presentation"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-top"><div class="modal-icon" id="modalIcon" aria-hidden="true">✦</div><button class="btn" id="modalClose" type="button" aria-label="閉じる">×</button></div><h2 id="modalTitle" tabindex="-1">遊び方</h2><div id="modalBody"></div><div class="modal-buttons" id="modalButtons"></div></div></div>
 <div class="toast" id="toast" role="status"></div>
 <script src="./js/game-data.js" defer></script>
 <script src="./js/route-system.js" defer></script>
 <script src="./js/risk-sim.js" defer></script>
 <script src="./js/tutorial-spotlight.js" defer></script>
 <script src="./js/playtest-review.js" defer></script>
+<script src="./js/session-ui.js" defer></script>
 <script src="./js/app.js" defer></script>
 <script src="./js/menu.js" defer></script>
 </body>
