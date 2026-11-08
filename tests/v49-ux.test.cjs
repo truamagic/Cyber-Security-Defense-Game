@@ -11,7 +11,7 @@ const win={};
 for(const name of ['game-data','route-system','risk-sim','session-ui','decision-support'])
  vm.runInNewContext(read('js/'+name+'.js'),{window:win,Math});
 const CFG=win.HD_CONFIG,R=win.HD_RISK,U=win.HD_SESSION_UI,D=win.HD_DECISION,P=win.HD_ROUTING;
-const game={phase:'ready',wave:0,waveLimit:7,sp:420,towers:[],trainingLevel:0,risk:R.fresh('hard')};
+const game={phase:'ready',wave:0,waveLimit:7,sp:420,integrity:100,bcpUsed:false,towers:[],trainingLevel:0,risk:R.fresh('hard')};
 let forecast=D.nextWave(game,CFG,U,P);
 assert.equal(forecast.wave,1);
 assert.equal(forecast.mainCount,14);

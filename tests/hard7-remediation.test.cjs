@@ -80,7 +80,7 @@ assert.ok(app.includes('dataset.baseDisabled=String(!!blocked)'));
 assert.ok(app.includes("SessionUI.waveBonus(waveNumber,game.waveLimit,WAVE_DEFS)"));
 assert.ok(app.includes('game.sp+=clearBonus'));
 assert.ok(app.includes('ボーナス +${clearBonus} SP'));
-assert.ok(app.includes('7 WAVE中間報酬 +170 SP'));
+assert.ok(app.includes('W5突破すると +170 SP'));
 assert.ok(!app.includes('game.sp+=wave.bonus'));
 assert.ok(app.includes('SessionUI.pendingTiming(game,tower,Risk.PENDING_FACTOR)'));
 assert.ok(app.includes('無料で待つ：${pendingInfo.autoLabel}'));
