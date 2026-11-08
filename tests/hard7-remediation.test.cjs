@@ -70,7 +70,7 @@ assert.equal(flags.has('is-unaffordable'),true);
 const app=read('js/app.js'),html=read('index.html'),style=read('css/playtest-polish.css');
 assert.ok(html.indexOf('js/session-ui.js')<html.indexOf('js/app.js'));
 assert.ok(html.includes('id="modalTitle" tabindex="-1"'));
-assert.ok(html.includes('C / RISK 4.7'));
+assert.match(html,/C \/ RISK 4\.[0-9]+/,'current C/RISK v4.x should retain a visible version label');
 assert.ok(app.includes("function syncLiveEconomy(force=false)"));
 assert.ok(app.includes("lastTime=ts;update(dt);syncLiveEconomy();render()"),'must sync during combat');
 assert.ok(app.includes('syncLiveEconomy(true)'), 'synchronize after full re-render');
