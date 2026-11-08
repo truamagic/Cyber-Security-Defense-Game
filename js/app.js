@@ -97,7 +97,7 @@
     const originalDifficulty=tutorial?.originalDifficulty||$('difficultySelect').value;
     tutorial=null;resetGame(0);
     tutorial={active:true,step:'pad',originalDifficulty};
-    $('difficultySelect').value='easy';game.risk=Risk.fresh('easy');game.waveLimit=1;refreshUI();
+    $('difficultySelect').value='easy';game.risk=Risk.fresh('easy');game.waveLimit=1;game.sp=360;refreshUI();
     addLog('初心者向けの操作練習を開始しました。練習中のSPやスコアは通常プレイへ引き継ぎません。');
     tutorialRender();
     // The spotlight reveals the current target; do not scroll the target out
@@ -175,7 +175,7 @@
     closeDrawer({restoreFocus:false});
     const selected=chooseRoute(forcedRoute);
     game={risk:Risk.fresh($('difficultySelect').value),waveLimit:configuredWaveLimit,routeIndex:activeRouteIndex,routeName:selected.name,
-      phase:'ready',wave:0,sp:360,integrity:100,privacy:100,score:0,kills:0,leaks:0,
+      phase:'ready',wave:0,sp:SessionUI.startingSP($('difficultySelect').value),integrity:100,privacy:100,score:0,kills:0,leaks:0,
       towers:PADS.map(()=>null),selectedType:'mail',selectedPad:-1,trainingLevel:0,
       midRouteOpen:false,lateRouteOpen:false,wifiAlertActive:false,waveEvents:[],notice:'',noticeLeft:0,
       enemies:[],effects:[],queue:[],spawnIndex:0,spawnTimer:0,spawned:0,spawnTotal:0,
@@ -187,6 +187,7 @@
     $('difficultySelect').disabled=false;
     addLog(`基本ルート ${activeRouteIndex+1}/5「${selected.name}」を選択。WAVE 3で中央、WAVE 5で病院付近から侵入経路が追加されます。`,'info');
     addLog('マップの設置地点を選び、射程を確認して防御を配置してください。','info');
+    if(game.risk.mode==='hard')addLog(SessionUI.forecast('hard',1),'info');
     refreshUI();
   }
   function posAt(distance,route='main'){
@@ -202,7 +203,15 @@
     return {...nodes[nodes.length-1]};
   }
   function money(n){return n.toLocaleString('ja-JP')}
-  function levelStats(t){const lv=Risk.effectiveLevel(t)-1,impact=Risk.efficiency(t);return {damage:TOWERS[t.type].damage*(1+lv*.37)*impact,range:TOWERS[t.type].range+lv*12,rate:TOWERS[t.type].rate*Math.pow(.90,lv)*(impact>0?1/Math.max(.4,impact):99),effectiveLevel:lv+1,impact}}
+  function levelStats(t){
+    const lv=Risk.effectiveLevel(t)-1,impact=Risk.efficiency(t);
+    // Efficiency applies ONCE to damage. Applying it again to attack rate
+    // squared the DPS reduction while showing only a single efficiency value.
+    return {damage:TOWERS[t.type].damage*(1+lv*.37)*impact,
+      range:TOWERS[t.type].range+lv*12,
+      rate:TOWERS[t.type].rate*Math.pow(.90,lv),
+      effectiveLevel:lv+1,impact};
+  }
   function logCategory(message,kind){
     if(/Wi-Fi|無線LAN/.test(message))return 'incident';
     if(/研修|教育|報告体制|人的リスク|早期報告|定着度/.test(message))return 'education';
@@ -412,14 +421,18 @@
       const bar=document.createElement('div');bar.className='risk-healthbar';const fill=document.createElement('i');fill.style.width=t.health+'%';fill.className=t.health<30?'danger':t.health<65?'warn':'';bar.append(fill);card.append(bar);
       const timing=SessionUI.pendingTiming(game,t,Risk.PENDING_FACTOR);
       const extra=document.createElement('div');extra.className='risk-extra';
-      extra.textContent=`サポート：${t.supportLeft===0?'期限切れ':`残り${t.supportLeft}ウェーブ`} ｜ 予防保守：${t.preventive}ウェーブ ｜ ${timing?'強化自動完了：'+timing.autoLabel:'更新作業なし'}`;
+      extra.textContent=`サポート：${t.supportLeft===0?'期限切れ':`残り${t.supportLeft}ウェーブ`} ｜ 予防保守：${t.preventive}ウェーブ ｜ ${timing?(timing.terminal?'強化未完了：'+timing.originalLabel:'強化自動完了：'+timing.autoLabel):'更新作業なし'}`;
       card.append(extra);
       if(timing){
         const delay=document.createElement('div');delay.className='upgrade-delay-note';
-        delay.innerHTML=`<strong>更新待ち：Lv.${t.level} → Lv.${timing.targetLevel}</strong>
-          <div>実効Lv.${Risk.effectiveLevel(t)} ／ 更新待ち期間の効率 ×${Math.round(Risk.PENDING_FACTOR*100)}%（約${timing.penaltyPercent}%低下）</div>
-          <div>無料：${timing.autoLabel}</div>
-          <div>有料：追加検証 ${Risk.expediteCost(t)} SPで即時完了・待機ペナルティ解除</div>`;
+        delay.innerHTML=timing.terminal
+          ?`<strong>ミッション終了：更新作業は未完了</strong>
+            <div>申請 Lv.${t.level} → Lv.${timing.targetLevel} ／ ${timing.originalLabel}</div>
+            <div>既払い${timing.paidCost} SP。これ以上の操作・自動完了はありません。</div>`
+          :`<strong>更新待ち：Lv.${t.level} → Lv.${timing.targetLevel}</strong>
+            <div>実効Lv.${Risk.effectiveLevel(t)} ／ 更新待ち期間の効率 ×${Math.round(Risk.PENDING_FACTOR*100)}%（約${timing.penaltyPercent}%低下）</div>
+            <div>無料：${timing.autoLabel}</div>
+            <div>有料：追加検証 ${Risk.expediteCost(t)} SPで即時完了・待機ペナルティ解除</div>`;
         card.append(delay);
       }
       const change=document.createElement('div');change.className='risk-extra';
@@ -469,10 +482,15 @@
     const [tag]=riskTag(tower),chance=Math.round(Risk.upgradeChance(r,tower)*100);
     const pendingInfo=SessionUI.pendingTiming(game,tower,Risk.PENDING_FACTOR);
     const delayDetails=pendingInfo
-      ?`<div class="upgrade-delay-note"><strong>強化申請済み：Lv.${tower.level} → Lv.${pendingInfo.targetLevel}</strong>
-          <div>現在の実効Lv.${s.effectiveLevel} ／ 更新待ち期間は防御効率 ×${Math.round(Risk.PENDING_FACTOR*100)}%（約${pendingInfo.penaltyPercent}%低下、他の状態の影響を除く）</div>
-          <div>無料で待つ：${pendingInfo.autoLabel}</div>
-          <div>追加検証：${Risk.expediteCost(tower)} SPで即時にLv.${pendingInfo.targetLevel}となり、更新待ちによる性能低下を解除</div></div>`
+      ?pendingInfo.terminal
+        ?`<div class="upgrade-delay-note"><strong>ミッション終了：強化は未完了</strong>
+            <div>申請済み Lv.${tower.level} → Lv.${pendingInfo.targetLevel} ／ 実効Lv.${s.effectiveLevel}</div>
+            <div>${pendingInfo.originalLabel} ／ 支払済み${pendingInfo.paidCost} SP</div>
+            <div>ゲームが終了したため自動完了・追加検証は実行できません。</div></div>`
+        :`<div class="upgrade-delay-note"><strong>強化申請済み：Lv.${tower.level} → Lv.${pendingInfo.targetLevel}</strong>
+            <div>現在の実効Lv.${s.effectiveLevel} ／ 更新待ち期間は防御効率 ×${Math.round(Risk.PENDING_FACTOR*100)}%（約${pendingInfo.penaltyPercent}%低下、他の状態の影響を除く）</div>
+            <div>無料で待つ：${pendingInfo.autoLabel}</div>
+            <div>追加検証：${Risk.expediteCost(tower)} SPで即時にLv.${pendingInfo.targetLevel}となり、更新待ちによる性能低下を解除</div></div>`
       :`<div>強化即時成功率：${chance}% ／ 遅延時は既払いのSPを再請求せずウェーブ終了時に完了</div>`;
     explain.innerHTML=`<strong>運用状態：${tag}</strong><div>健全度 ${tower.health}% ｜ 実効Lv.${s.effectiveLevel} ｜ 防御効率 ${Math.round(s.impact*100)}%</div><div>サポート ${tower.supportLeft===0?'期限切れ':`残${tower.supportLeft}ウェーブ`} ／ 予防保守 ${tower.preventive}ウェーブ</div>${delayDetails}</div>`;
     detail.append(explain);
@@ -549,7 +567,8 @@
     const t=game.towers[i];if(!t||t.pending||t.level>=MAX_LEVEL)return;
     const cost=TOWERS[t.type].upgrade[t.level-1];if(game.sp<cost){toast('SPが足りません');return}
     game.sp-=cost;game.spending.upgrade+=cost;t.invested+=cost;
-    const outcome=Risk.doUpgrade(game.risk,t,cost);
+    const dueWave=game.phase==='active'?game.wave:game.wave+1;
+    const outcome=Risk.doUpgrade(game.risk,t,cost,dueWave);
     if(outcome.succeed){addLog(`${TOWERS[t.type].short}をLv.${t.level}に強化（-${cost} SP）`);toast('設備の強化が完了しました')}
     else{
       const timing=SessionUI.pendingTiming(game,t,Risk.PENDING_FACTOR);
@@ -567,12 +586,16 @@
     if(placement||!(game.phase==='ready'||game.phase==='intermission')||game.wave>=game.waveLimit)return;
     game.wave++;
     const wave=WAVE_DEFS[game.wave-1];
+    if(!tutorial?.active&&game.risk.mode==='hard'&&game.wave>=5){
+      const hint=SessionUI.forecast(game.risk.mode,game.wave);
+      if(hint)addLog(hint,'warn');
+    }
     if(game.wave===5&&!tutorial?.active){
       const amount=waveClearBonus(5);
       addLog(`WAVE 5突破報酬：+${amount} SP（${game.waveLimit===5?'5 WAVEモードの最終戦':'7 WAVEモードの中間戦'}）`,'info');
     }
     game.phase='active';
-    game.queue=(isGuided('waveReady')?['phish','phish','auth','phish']:wave.units.slice());
+    game.queue=(isGuided('waveReady')?['phish','phish','auth','phish']:SessionUI.waveUnits(game.risk.mode,game.wave,wave.units));
     game.spawned=0;
     game.midRouteOpen=!tutorial?.active&&game.wave>=3;
     game.lateRouteOpen=!tutorial?.active&&game.wave>=5;
@@ -600,7 +623,7 @@
     toast(`${wave.title}：${wave.subtitle}`);
     refreshUI();
   }
-  function spawnEnemy(kind,route='main',startFraction=0){const e=ENEMIES[kind],w=WAVE_DEFS[game.wave-1],routeLen=routeData(route).total,health=Math.round(e.hp*w.hpMult);game.enemies.push({kind,route,distance:routeLen*startFraction,hp:health,maxHp:health,slowLeft:0,flash:0,uid:Math.random()});game.spawned++}
+  function spawnEnemy(kind,route='main',startFraction=0){const e=ENEMIES[kind],w=WAVE_DEFS[game.wave-1],routeLen=routeData(route).total,health=Math.round(e.hp*SessionUI.hpMultiplier(game.risk.mode,game.wave,w.hpMult));game.enemies.push({kind,route,distance:routeLen*startFraction,hp:health,maxHp:health,slowLeft:0,flash:0,uid:Math.random()});game.spawned++}
   function fireEvent(e){e.fired=true;
     if(e.kind==='wifiWarning'){
       game.wifiAlertActive=true;
@@ -663,8 +686,8 @@
     for(let i=game.enemies.length-1;i>=0;i--){const enemy=game.enemies[i],base=ENEMIES[enemy.kind];enemy.slowLeft=Math.max(0,enemy.slowLeft-delta);enemy.flash=Math.max(0,enemy.flash-delta);enemy.distance+=(base.speed*(enemy.slowLeft>0?.61:1)*(enemy.kind==='insider'?Risk.educationSpeed(game.risk,game.trainingLevel,TRAINING_SPEED):1))*delta*routeTravelScale[enemy.route];if(enemy.distance>=routeData(enemy.route).total-20){game.enemies.splice(i,1);game.integrity=Math.max(0,game.integrity-base.damage);game.privacy=Math.max(0,game.privacy-base.leak);game.leaks++;game.leaksByKind[enemy.kind]=(game.leaksByKind[enemy.kind]||0)+1;refreshUI();const p=posAt(routeData(enemy.route).total-28,enemy.route);game.effects.push({type:'breach',x:p.x,y:p.y,life:.7,max:.7});addLog(`侵入を許しました：診療 -${base.damage} / 保護 -${base.leak}`,'danger');if(game.integrity<=0||game.privacy<=0){finish(false);return}}}
     for(let i=0;i<game.towers.length;i++){const tower=game.towers[i];if(!tower||Risk.isOffline(tower))continue;tower.cooldown-=delta;if(tower.cooldown>0)continue;const base=TOWERS[tower.type],s=levelStats(tower),pad=PADS[i];let target=null;
       for(const enemy of game.enemies){const p=posAt(enemy.distance,enemy.route);if(Math.hypot(p.x-pad.x,p.y-pad.y)<=s.range+ENEMIES[enemy.kind].radius){if(!target||enemy.distance/routeData(enemy.route).total>target.distance/routeData(target.route).total)target=enemy}}
-      if(target){tower.cooldown=s.rate;const ep=posAt(target.distance,target.route),lv=tower.level-1,special=(tower.type==='mail'&&target.kind==='phish')||(tower.type==='mfa'&&target.kind==='auth')||(tower.type==='edr'&&(target.kind==='malware'||target.kind==='insider'));
-        const impact=s.damage*(base.vs[target.kind]||1)*(special?1+lv*.22:1);const actualDamage=Math.min(target.hp,impact);target.hp-=impact;target.flash=.14;const stats=game.towerStats[tower.type]||(game.towerStats[tower.type]={shots:0,kills:0,damage:0});stats.shots++;stats.damage+=Math.max(0,actualDamage);if(base.slow)target.slowLeft=Math.max(target.slowLeft,base.slow+lv*.48);game.effects.push({type:'beam',from:{x:pad.x,y:pad.y},to:ep,color:base.color,life:.16,max:.16});if(target.hp<=0){game.enemies.splice(game.enemies.indexOf(target),1);const targetInfo=ENEMIES[target.kind];game.sp+=targetInfo.reward;game.score+=targetInfo.reward*10;game.kills++;stats.kills++;game.killsByKind[target.kind]=(game.killsByKind[target.kind]||0)+1;if(game.selectedPad>=0){renderDetail();renderQuickTower()}renderTraining();$('bcpBtn').disabled=game.bcpUsed||game.integrity>=100||game.sp<BCP_COST;game.effects.push({type:'burst',x:ep.x,y:ep.y,color:targetInfo.color,life:.47,max:.47});}}
+      if(target){tower.cooldown=s.rate;const ep=posAt(target.distance,target.route),lv=Risk.effectiveLevel(tower)-1,special=(tower.type==='mail'&&target.kind==='phish')||(tower.type==='mfa'&&target.kind==='auth')||(tower.type==='edr'&&(target.kind==='malware'||target.kind==='insider'));
+        const impact=s.damage*(base.vs[target.kind]||1)*(special?1+lv*.22:1);const actualDamage=Math.min(target.hp,impact);target.hp-=impact;target.flash=.14;const stats=game.towerStats[tower.type]||(game.towerStats[tower.type]={shots:0,kills:0,damage:0});stats.shots++;stats.damage+=Math.max(0,actualDamage);if(base.slow)target.slowLeft=Math.max(target.slowLeft,base.slow+lv*.48);game.effects.push({type:'beam',from:{x:pad.x,y:pad.y},to:ep,color:base.color,life:.16,max:.16});if(target.hp<=0){game.enemies.splice(game.enemies.indexOf(target),1);const targetInfo=ENEMIES[target.kind];game.sp+=SessionUI.killReward(game.risk.mode,game.wave,targetInfo.reward);game.score+=targetInfo.reward*10;game.kills++;stats.kills++;game.killsByKind[target.kind]=(game.killsByKind[target.kind]||0)+1;if(game.selectedPad>=0){renderDetail();renderQuickTower()}renderTraining();$('bcpBtn').disabled=game.bcpUsed||game.integrity>=100||game.sp<BCP_COST;game.effects.push({type:'burst',x:ep.x,y:ep.y,color:targetInfo.color,life:.47,max:.47});}}
       else tower.cooldown=0;
     }
     if(game.spawnIndex>=game.queue.length&&game.waveEvents.every(e=>e.fired)&&game.enemies.length===0){const clearBonus=waveClearBonus();game.sp+=clearBonus;game.score+=Math.round((game.integrity+game.privacy)*6);
@@ -803,7 +826,7 @@
     if(near<0){if(!placement){game.selectedPad=-1;renderDetail();renderQuickTower();syncPadButtons()}return}pressPad(near)}
   function moveHover(e){const rect=canvas.getBoundingClientRect(),x=(e.clientX-rect.left)/rect.width*W,y=(e.clientY-rect.top)/rect.height*H;let near=-1,dist=30;for(let i=0;i<PADS.length;i++){const d=Math.hypot(PADS[i].x-x,PADS[i].y-y);if(d<dist){dist=d;near=i}}hoverPad=near;canvas.style.cursor=near>=0?'pointer':'crosshair'}
   let lastFocus=null;
-  function closeModal(){const backdrop=$('modalBackdrop');backdrop.classList.remove('open');backdrop.dataset.restorePause='0';if(lastFocus&&lastFocus.isConnected)lastFocus.focus();if(tutorial?.active)tutorialRender();else Spotlight.hide()}
+  function closeModal(){const backdrop=$('modalBackdrop');backdrop.classList.remove('open');document.body.classList.remove('modal-open');backdrop.dataset.restorePause='0';if(lastFocus&&lastFocus.isConnected)lastFocus.focus();if(tutorial?.active)tutorialRender();else Spotlight.hide()}
   function openModal(title,bodyHTML,buttons,closable=true,focusHeading=false){
     Spotlight.suspend();
     $('modalBackdrop').dataset.restorePause='0';
@@ -819,6 +842,7 @@
       btn.addEventListener('click',()=>{closeModal();b.action?.()});
       $('modalButtons').append(btn);
     }
+    document.body.classList.add('modal-open');
     $('modalBackdrop').classList.add('open');
     const dialog=$('modalBackdrop').querySelector('.modal');
     dialog.scrollTop=0;
@@ -829,7 +853,8 @@
       dialog.scrollTop=0;
     }else $('modalButtons').querySelector('button')?.focus({preventScroll:true});
   }
-  function showHelp(){if(placement)cancelPlacement({quiet:true});closeDrawer({restoreFocus:false});const wasActive=game.phase==='active'&&!game.paused;if(wasActive)game.paused=true;refreshUI();openModal('遊び方・作戦ガイド',`<p>あなたは架空の病院の防衛担当者。<strong>診療継続度と情報保護度を保ちながら、${game.waveLimit}ウェーブを突破</strong>してください。</p><ul><li>マップ上の <strong>空き地点＋</strong> を押すとその地点のショップが開きます。設備を選び、<strong>カバー範囲の円を確認してから「設置確定」</strong>してください</li><li>ショップボタンから先に設備を選ぶ方法も利用できます。仮配置の段階ではSPは消費されません</li><li><strong>▶ ウェーブ開始</strong>で敵が出現。設備は自動で迎撃</li><li>撃退でSPを獲得。<strong>どの防御設備も</strong>配置地点を再度タップしてLv.3まで強化できます</li><li>配置済みの設備をタップすると <strong>強化スライドパネル</strong> が開きます（最大Lv.3）</li><li><strong>ショップ／強化／職員教育／ログ</strong> は上部ボタンから開閉でき、Escでも閉じられます</li><li>メール対策はフィッシング、MFAは認証系、EDRはマルウェアに強い</li><li>ネットワーク分離は敵の進行を一時的に遅くします</li><li>第2ウェーブ以降、手順逸脱を想定した人的リスクが<strong>マップ途中に突然出現</strong>します</li><li>基本進行ルートは<strong>5つからプレイ開始時にランダム決定</strong>され、設置場所も経路に合わせて変化します。第3ウェーブで中央の侵入口、第5ウェーブで病院システムに近い侵入口が追加されます</li><li><strong>職員教育（全体強化）</strong>で人的リスク型の侵攻が遅くなります</li><li>BCPは診療継続度のみ一部回復（ウェーブごとに1回まで）</li><li>設備は65%返金で売却可能。途中で一時停止・倍速もできます</li><li><strong>運用管理</strong>：NORMAL/HARDでは設備の健全度がウェーブごとに低下し、保守・予防保守・サポート更新が必要です</li><li><strong>強化遅延</strong>：WAVE中の申請はそのWAVE終了時、WAVE間の申請は次のWAVE終了時に無料で自動完了します。待機中は防御効率が約14%低下し、追加検証で即時完了できます</li><li>職員教育の効果は定着度に依存します。フォローアップ研修・報告体制の改善で効果を維持してください</li><li><strong>次ウェーブの事故リスク</strong>は運用管理で確認でき、予防措置で確率を下げられます</li><li><strong>WAVE 5突破報酬</strong>：5 WAVEの最終戦では0 SP、7 WAVEの中間戦では170 SPです。敵撃退によるSPとは別に加算されます</li><li><strong>Wi-Fi特殊イベント</strong>：5ウェーブではWAVE 4、7ウェーブではWAVE 6に、認証情報が悪用された不審な無線LAN接続が発生する場合があります。接続異常の警告が出たら中央経路をカバーするネットワーク分離・EDRと、教育・報告体制を確認してください。イベントそのものでは直接被害は発生せず、防衛を突破した敵のみが影響します</li></ul><p style="font-size:11px">※ このゲームは教育向けに対策効果を抽象化しています。実際のサイバー攻撃手順や病院の設備構成は再現していません。</p>`,[{label:'ゲームに戻る',primary:true,action:()=>{if(wasActive){game.paused=false;refreshUI()}}}],true);
+  function showHelp(){if(placement)cancelPlacement({quiet:true});closeDrawer({restoreFocus:false});const wasActive=game.phase==='active'&&!game.paused;if(wasActive)game.paused=true;refreshUI();openModal('遊び方・作戦ガイド',`<p>あなたは架空の病院の防衛担当者。<strong>診療継続度と情報保護度を保ちながら、${game.waveLimit}ウェーブを突破</strong>してください。</p><ul><li>マップ上の <strong>空き地点＋</strong> を押すとその地点のショップが開きます。設備を選び、<strong>カバー範囲の円を確認してから「設置確定」</strong>してください</li><li>ショップボタンから先に設備を選ぶ方法も利用できます。仮配置の段階ではSPは消費されません</li><li><strong>▶ ウェーブ開始</strong>で敵が出現。設備は自動で迎撃</li><li>撃退でSPを獲得。<strong>どの防御設備も</strong>配置地点を再度タップしてLv.3まで強化できます</li><li>配置済みの設備をタップすると <strong>強化スライドパネル</strong> が開きます（最大Lv.3）</li><li><strong>ショップ／強化／職員教育／ログ</strong> は上部ボタンから開閉でき、Escでも閉じられます</li><li>メール対策はフィッシング、MFAは認証系、EDRはマルウェアに強い</li><li>ネットワーク分離は敵の進行を一時的に遅くします</li><li>第2ウェーブ以降、手順逸脱を想定した人的リスクが<strong>マップ途中に突然出現</strong>します</li><li>基本進行ルートは<strong>5つからプレイ開始時にランダム決定</strong>され、設置場所も経路に合わせて変化します。第3ウェーブで中央の侵入口、第5ウェーブで病院システムに近い侵入口が追加されます</li><li><strong>職員教育（全体強化）</strong>で人的リスク型の侵攻が遅くなります</li><li>BCPは診療継続度のみ一部回復（ウェーブごとに1回まで）</li><li>設備は65%返金で売却可能。途中で一時停止・倍速もできます</li><li><strong>運用管理</strong>：NORMAL/HARDでは設備の健全度がウェーブごとに低下し、保守・予防保守・サポート更新が必要です</li><li><strong>強化遅延</strong>：WAVE中の申請はそのWAVE終了時、WAVE間の申請は次のWAVE終了時に無料で自動完了します。待機中は防御効率が約14%低下し、追加検証で即時完了できます</li><li>職員教育の効果は定着度に依存します。フォローアップ研修・報告体制の改善で効果を維持してください</li><li><strong>次ウェーブの事故リスク</strong>は運用管理で確認でき、予防措置で確率を下げられます</li><li><strong>HARDの戦略バランス</strong>：初期SPは420。WAVE 1はフィッシング8・認証4・マルウェア2で、メール対策だけに偏らない編成です。WAVE 5/6/7の撃退SPは標準の90%/80%/75%、WAVE 6/7の敵HPは標準より12%/15%高くなります。EASY・NORMALの編成と収入は従来どおりです</li>
+<li><strong>WAVE 5突破報酬</strong>：5 WAVEの最終戦では0 SP、7 WAVEの中間戦では170 SPです。敵撃退によるSPとは別に加算されます</li><li><strong>Wi-Fi特殊イベント</strong>：5ウェーブではWAVE 4、7ウェーブではWAVE 6に、認証情報が悪用された不審な無線LAN接続が発生する場合があります。接続異常の警告が出たら中央経路をカバーするネットワーク分離・EDRと、教育・報告体制を確認してください。イベントそのものでは直接被害は発生せず、防衛を突破した敵のみが影響します</li></ul><p style="font-size:11px">※ このゲームは教育向けに対策効果を抽象化しています。実際のサイバー攻撃手順や病院の設備構成は再現していません。</p>`,[{label:'ゲームに戻る',primary:true,action:()=>{if(wasActive){game.paused=false;refreshUI()}}}],true);
     // Restore pause state when closing by backdrop or ×, too.
     $('modalBackdrop').dataset.restorePause=wasActive?'1':'0';}
   function showResult(win){

@@ -13,14 +13,46 @@
   }
   function pendingTiming(game,tower,pendingFactor=.86){
     if(!tower?.pending)return null;
-    const wave=Math.max(1,game.phase==='active'?game.wave:game.wave+1);
+    const terminal=game.phase==='lost'||game.phase==='won';
+    const fallback=game.phase==='active'||terminal?game.wave:game.wave+1;
+    // Due wave is fixed when the upgrade is requested, never recalculated
+    // from phase after a loss or when the detail panel is reopened.
+    const wave=Number.isInteger(tower.pending.dueWave)&&tower.pending.dueWave>=1
+      ?tower.pending.dueWave:Math.max(1,fallback);
     return {
-      wave,
+      wave,terminal,
       targetLevel:tower.pending.targetLevel,
       paidCost:tower.pending.cost,
       penaltyPercent:Math.round((1-pendingFactor)*100),
-      autoLabel:`WAVE ${wave} 終了時・追加費用0 SP`
+      originalLabel:`当初予定：WAVE ${wave} 終了時`,
+      autoLabel:terminal
+        ?`ミッション終了により未完了（当初予定：WAVE ${wave} 終了時）`
+        :`WAVE ${wave} 終了時・追加費用0 SP`
     };
+  }
+  // HARD-only, data-driven balance adjustments. Easy and Normal remain unchanged.
+  function startingSP(mode){return mode==='hard'?420:360}
+  function waveUnits(mode,waveNumber,units){
+    if(mode==='hard'&&waveNumber===1)
+      return 'phish auth phish phish malware auth phish phish auth malware phish auth phish phish'.split(' ');
+    return units.slice();
+  }
+  function hpMultiplier(mode,waveNumber,base){
+    if(mode!=='hard')return base;
+    if(waveNumber===6)return Number((base*1.12).toFixed(4));
+    if(waveNumber===7)return Number((base*1.15).toFixed(4));
+    return base;
+  }
+  function killReward(mode,waveNumber,baseReward){
+    const factor=mode!=='hard'?1:waveNumber>=7?.75:waveNumber===6?.80:waveNumber===5?.90:1;
+    return Math.max(1,Math.round(baseReward*factor));
+  }
+  function forecast(mode,waveNumber){
+    if(mode==='hard'&&waveNumber===1)return 'HARD W1予測：フィッシング8・認証4・マルウェア2。射程と相性を確認。';
+    if(mode==='hard'&&waveNumber===5)return 'HARD W5以降：撃退SPの収入効率が段階的に低下。';
+    if(mode==='hard'&&waveNumber===6)return 'HARD W6：敵の耐久力が従来より約12%上昇。';
+    if(mode==='hard'&&waveNumber===7)return 'HARD W7：敵の耐久力が従来より約15%上昇。';
+    return '';
   }
   function syncWalletDOM(document,sp,towers){
     if(!Number.isFinite(sp))return;
@@ -47,5 +79,5 @@
       if(warning)warning.hidden=!shortage;
     }
   }
-  window.HD_SESSION_UI=Object.freeze({waveBonus,pendingTiming,syncWalletDOM});
+  window.HD_SESSION_UI=Object.freeze({waveBonus,pendingTiming,startingSP,waveUnits,hpMultiplier,killReward,forecast,syncWalletDOM});
 })();

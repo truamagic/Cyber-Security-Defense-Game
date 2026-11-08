@@ -133,9 +133,9 @@
     return {...output,title:kind==='vulnerability'?'未対応の脆弱性':'機器・ソフトウェアの不調',
       message:`${target.type.toUpperCase()}の健全度が${actual}pt低下。${isOffline(target)?'停止中のため応急保守が必要。':'保守で復旧できます。'}`};
   }
-  function doUpgrade(r,t,cost){const chance=upgradeChance(r,t);const succeed=rand(r)<chance;
+  function doUpgrade(r,t,cost,dueWave=null){const chance=upgradeChance(r,t);const succeed=rand(r)<chance;
     if(succeed){t.level++;return {succeed:true,chance}}
-    t.pending={targetLevel:t.level+1,remaining:1,cost};r.upgradeDelays++;
+    t.pending={targetLevel:t.level+1,remaining:1,cost,dueWave:Number.isInteger(dueWave)&&dueWave>=1?dueWave:null};r.upgradeDelays++;
     if(r.mode==='hard'&&rand(r)<.40){t.health=clamp(t.health-7,0,100);t.lastChange='導入トラブルによる健全度低下：7pt';}
     return {succeed:false,chance};
   }

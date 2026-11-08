@@ -26,3 +26,9 @@ body.tutorial-active:not(.drawer-open) #gameShell #tutorialPanel{position:relati
   .tutorial-spotlight-title{font-size:11px}
 }
 @media(prefers-reduced-motion:reduce){.tutorial-spotlight-ring{animation:none!important}}
+
+/* v4.8: confirmation and help dialogs always take precedence over the guide.
+   Previous tutorialPanel z-index 61 hid modal text at z-index 20. */
+body.modal-open .modal-backdrop.open{z-index:100!important}
+body.modal-open #tutorialPanel{visibility:hidden!important}
+body.modal-open #tutorialSpotlight{display:none!important}
