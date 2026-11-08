@@ -175,7 +175,7 @@
     game={risk:Risk.fresh($('difficultySelect').value),waveLimit:configuredWaveLimit,routeIndex:activeRouteIndex,routeName:selected.name,
       phase:'ready',wave:0,sp:360,integrity:100,privacy:100,score:0,kills:0,leaks:0,
       towers:PADS.map(()=>null),selectedType:'mail',selectedPad:-1,trainingLevel:0,
-      midRouteOpen:false,lateRouteOpen:false,waveEvents:[],notice:'',noticeLeft:0,
+      midRouteOpen:false,lateRouteOpen:false,wifiAlertActive:false,waveEvents:[],notice:'',noticeLeft:0,
       enemies:[],effects:[],queue:[],spawnIndex:0,spawnTimer:0,spawned:0,spawnTotal:0,
       time:0,speed:1,paused:false,bcpUsed:false,events:[],
       leaksByKind:{},killsByKind:{},towerStats:{},
@@ -202,10 +202,11 @@
   function money(n){return n.toLocaleString('ja-JP')}
   function levelStats(t){const lv=Risk.effectiveLevel(t)-1,impact=Risk.efficiency(t);return {damage:TOWERS[t.type].damage*(1+lv*.37)*impact,range:TOWERS[t.type].range+lv*12,rate:TOWERS[t.type].rate*Math.pow(.90,lv)*(impact>0?1/Math.max(.4,impact):99),effectiveLevel:lv+1,impact}}
   function logCategory(message,kind){
+    if(/Wi-Fi|無線LAN/.test(message))return 'incident';
     if(/研修|教育|報告体制|人的リスク|早期報告|定着度/.test(message))return 'education';
     if(/保守|更新作業|サポート|設備不調|健全度|設備停止|脆弱性/.test(message))return 'maintenance';
     if(/設置|強化|売却|購入/.test(message))return 'investment';
-    if(kind==='danger'||/侵入|撃退|障害|事故|被害/.test(message))return 'incident';
+    if(kind==='danger'||/Wi-Fi|無線LAN|認証情報|不審な接続|侵入|撃退|障害|事故|被害/.test(message))return 'incident';
     return 'general';
   }
   function addLog(message,kind='info'){
@@ -516,9 +517,17 @@
     const regular=tutorial?.active?[]:(EVENT_PLANS[game.wave]||[]).filter(e=>e.kind==='human').map(e=>({...e,at:e.at+(Risk.rand(game.risk)-.5)*1.5,fired:false}));
     const branches=tutorial?.active?[]:(Routing.branchEvents[game.wave]||[]).map(e=>({...e,at:e.at+(Risk.rand(game.risk)-.5)*.6,fired:false}));
     game.waveEvents=[...regular,...branches];
+    game.wifiAlertActive=false;
     if(!tutorial?.active){
       const inc=Risk.planIncident(game.risk,game.towers);
-      if(inc)game.waveEvents.push({at:inc.at,kind:'risk',scenario:inc.type,count:0,fired:false});
+      if(inc){
+        // Replace the normal incident on its eligible wave. No extra incident roll.
+        if(Risk.wifiEventEligible(game.risk,game.towers,inc,game.waveLimit,game.wave)){
+          game.waveEvents.push({at:4.2,kind:'wifiWarning',count:0,fired:false});
+          // Reserve up to 3 spawns; defenses may prevent some or all of them.
+          game.waveEvents.push({at:11,kind:'wifiResolve',count:3,fired:false});
+        }else game.waveEvents.push({at:inc.at,kind:'risk',scenario:inc.type,count:0,fired:false});
+      }
       if(game.wave===3)addLog('WAVE 3：マップ中央に新しい侵入経路が出現。','warn');
       if(game.wave===5)addLog('WAVE 5：病院システム近くに新しい侵入経路が出現。','danger');
     }
@@ -531,6 +540,35 @@
   }
   function spawnEnemy(kind,route='main',startFraction=0){const e=ENEMIES[kind],w=WAVE_DEFS[game.wave-1],routeLen=routeData(route).total,health=Math.round(e.hp*w.hpMult);game.enemies.push({kind,route,distance:routeLen*startFraction,hp:health,maxHp:health,slowLeft:0,flash:0,uid:Math.random()});game.spawned++}
   function fireEvent(e){e.fired=true;
+    if(e.kind==='wifiWarning'){
+      game.wifiAlertActive=true;
+      game.notice='⚠ Wi-Fi接続異常：中央経路を警戒';
+      game.noticeLeft=6.6;
+      addLog('Wi-Fi特殊イベント：保存済みの共有認証情報が悪用され、感染した医療者の私物PCによる不審な無線LAN接続を検知。分離・EDR・報告体制で拡大を防いでください。','warn');
+      toast('⚠ Wi-Fi接続異常を検知。中央経路への侵入に備えてください。');
+      refreshUI();
+      return;
+    }
+    if(e.kind==='wifiResolve'){
+      // Evaluate readiness AFTER the warning, so players can respond.
+      const readiness=Risk.wifiDefense(game.risk,game.towers,PADS,SIDE_PATH,TOWERS);
+      const result=Risk.resolveWifiIncident(game.risk,readiness);
+      game.wifiAlertActive=false;
+      game.spawnTotal=Math.max(game.spawned,game.spawnTotal-result.notSpawned);
+      const kinds=['auth','malware','auth'];
+      for(let j=0;j<result.threats;j++)spawnEnemy(kinds[j],'mid',j*.045);
+      const detail=result.protected
+        ?'対策が機能し、業務ネットワークへの拡大を抑制'
+        :'対策に不足があり、中央経路から不審なアクセスが進行';
+      const checks=[readiness.isolated?'分離○':'分離未対応',readiness.monitored?'EDR○':'EDR未対応',
+        readiness.reporting?'報告体制○':'報告体制未整備',readiness.educated?'教育定着○':'教育定着不足'].join('／');
+      game.notice=`Wi-Fiイベント：追加脅威 ${result.threats}件（回避 ${result.prevented}件）`;
+      game.noticeLeft=5;
+      addLog(`Wi-Fi認証情報の悪用：${detail}。追加${result.threats}件、抑制${result.prevented}件。${checks}`,result.protected?'info':'danger');
+      toast(game.notice);
+      refreshUI();
+      return;
+    }
     if(e.kind==='risk'){
       const result=Risk.applyIncident(game.risk,game.towers,e.scenario);
       game.integrity=Math.max(0,game.integrity-result.integrityLoss);
@@ -687,6 +725,10 @@
     roundRect(16,14,242,34,9,'#071728c9','#285367aa');text('HOSPITAL CYBER DEFENSE',30,31,'#a8d6da',11,'left',820);
     if(game.phase==='intermission'||game.phase==='ready'){roundRect(347,19,270,34,8,'#0a2d30cf','#3c8173a3');text(game.phase==='ready'?'防御設備を配置して開始':'保守・強化を確認して次のウェーブへ',482,36,'#7ce6cf',12,'center',770)}
     if(game.noticeLeft>0){roundRect(280,67,405,36,9,'#5b2b3ce5','#fa8394',1.5);text(game.notice,482,85,'#ffe1e8',14,'center',800)}
+    if(game.wifiAlertActive&&game.phase==='active'){
+      roundRect(335,112,292,29,7,'#563621ec','#ffd38a',1.5);
+      text('⚠ Wi-Fi接続異常 / 分離・EDRを確認',481,127,'#fff0c9',11,'center',850);
+    }
     if(game.paused&&!placement){ctx.fillStyle='#03111c9e';ctx.fillRect(0,0,W,H);roundRect(355,235,250,85,12,'#0f2a3adf','#65c9c8',2);text('Ⅱ  一時停止中',480,279,'#d9f9f6',24,'center',850)}
     else if(game.paused&&placement){roundRect(15,53,207,27,7,'#1a4850d9','#48d9c7',1);text('配置中は自動一時停止',26,67,'#b2faec',11,'left',800)}
   }
@@ -701,7 +743,7 @@
   let lastFocus=null;
   function closeModal(){const backdrop=$('modalBackdrop');backdrop.classList.remove('open');backdrop.dataset.restorePause='0';if(lastFocus&&lastFocus.isConnected)lastFocus.focus();if(tutorial?.active)tutorialRender();else Spotlight.hide()}
   function openModal(title,bodyHTML,buttons,closable=true){Spotlight.suspend();$('modalBackdrop').dataset.restorePause='0';lastFocus=document.activeElement;$('modalTitle').textContent=title;$('modalBody').innerHTML=bodyHTML;$('modalButtons').innerHTML='';$('modalClose').style.visibility=closable?'visible':'hidden';for(const b of buttons){const btn=document.createElement('button');btn.className='btn '+(b.primary?'btn-primary':'');btn.textContent=b.label;btn.addEventListener('click',()=>{closeModal();b.action?.()});$('modalButtons').append(btn)}$('modalBackdrop').classList.add('open');$('modalButtons').querySelector('button')?.focus()}
-  function showHelp(){if(placement)cancelPlacement({quiet:true});closeDrawer({restoreFocus:false});const wasActive=game.phase==='active'&&!game.paused;if(wasActive)game.paused=true;refreshUI();openModal('遊び方・作戦ガイド',`<p>あなたは架空の病院の防衛担当者。<strong>診療継続度と情報保護度を保ちながら、${game.waveLimit}ウェーブを突破</strong>してください。</p><ul><li>マップ上の <strong>空き地点＋</strong> を押すとその地点のショップが開きます。設備を選び、<strong>カバー範囲の円を確認してから「設置確定」</strong>してください</li><li>ショップボタンから先に設備を選ぶ方法も利用できます。仮配置の段階ではSPは消費されません</li><li><strong>▶ ウェーブ開始</strong>で敵が出現。設備は自動で迎撃</li><li>撃退でSPを獲得。<strong>どの防御設備も</strong>配置地点を再度タップしてLv.3まで強化できます</li><li>配置済みの設備をタップすると <strong>強化スライドパネル</strong> が開きます（最大Lv.3）</li><li><strong>ショップ／強化／職員教育／ログ</strong> は上部ボタンから開閉でき、Escでも閉じられます</li><li>メール対策はフィッシング、MFAは認証系、EDRはマルウェアに強い</li><li>ネットワーク分離は敵の進行を一時的に遅くします</li><li>第2ウェーブ以降、手順逸脱を想定した人的リスクが<strong>マップ途中に突然出現</strong>します</li><li>基本進行ルートは<strong>5つからプレイ開始時にランダム決定</strong>され、設置場所も経路に合わせて変化します。第3ウェーブで中央の侵入口、第5ウェーブで病院システムに近い侵入口が追加されます</li><li><strong>職員教育（全体強化）</strong>で人的リスク型の侵攻が遅くなります</li><li>BCPは診療継続度のみ一部回復（ウェーブごとに1回まで）</li><li>設備は65%返金で売却可能。途中で一時停止・倍速もできます</li><li><strong>運用管理</strong>：NORMAL/HARDでは設備の健全度がウェーブごとに低下し、保守・予防保守・サポート更新が必要です</li><li>強化は成功が保証されず、遅延した場合は次ウェーブの終了後に完了します（追加検証で即時完了も可能）</li><li>職員教育の効果は定着度に依存します。フォローアップ研修・報告体制の改善で効果を維持してください</li><li><strong>次ウェーブの事故リスク</strong>は運用管理で確認でき、予防措置で確率を下げられます</li></ul><p style="font-size:11px">※ このゲームは教育向けに対策効果を抽象化しています。実際のサイバー攻撃手順や病院の設備構成は再現していません。</p>`,[{label:'ゲームに戻る',primary:true,action:()=>{if(wasActive){game.paused=false;refreshUI()}}}],true);
+  function showHelp(){if(placement)cancelPlacement({quiet:true});closeDrawer({restoreFocus:false});const wasActive=game.phase==='active'&&!game.paused;if(wasActive)game.paused=true;refreshUI();openModal('遊び方・作戦ガイド',`<p>あなたは架空の病院の防衛担当者。<strong>診療継続度と情報保護度を保ちながら、${game.waveLimit}ウェーブを突破</strong>してください。</p><ul><li>マップ上の <strong>空き地点＋</strong> を押すとその地点のショップが開きます。設備を選び、<strong>カバー範囲の円を確認してから「設置確定」</strong>してください</li><li>ショップボタンから先に設備を選ぶ方法も利用できます。仮配置の段階ではSPは消費されません</li><li><strong>▶ ウェーブ開始</strong>で敵が出現。設備は自動で迎撃</li><li>撃退でSPを獲得。<strong>どの防御設備も</strong>配置地点を再度タップしてLv.3まで強化できます</li><li>配置済みの設備をタップすると <strong>強化スライドパネル</strong> が開きます（最大Lv.3）</li><li><strong>ショップ／強化／職員教育／ログ</strong> は上部ボタンから開閉でき、Escでも閉じられます</li><li>メール対策はフィッシング、MFAは認証系、EDRはマルウェアに強い</li><li>ネットワーク分離は敵の進行を一時的に遅くします</li><li>第2ウェーブ以降、手順逸脱を想定した人的リスクが<strong>マップ途中に突然出現</strong>します</li><li>基本進行ルートは<strong>5つからプレイ開始時にランダム決定</strong>され、設置場所も経路に合わせて変化します。第3ウェーブで中央の侵入口、第5ウェーブで病院システムに近い侵入口が追加されます</li><li><strong>職員教育（全体強化）</strong>で人的リスク型の侵攻が遅くなります</li><li>BCPは診療継続度のみ一部回復（ウェーブごとに1回まで）</li><li>設備は65%返金で売却可能。途中で一時停止・倍速もできます</li><li><strong>運用管理</strong>：NORMAL/HARDでは設備の健全度がウェーブごとに低下し、保守・予防保守・サポート更新が必要です</li><li>強化は成功が保証されず、遅延した場合は次ウェーブの終了後に完了します（追加検証で即時完了も可能）</li><li>職員教育の効果は定着度に依存します。フォローアップ研修・報告体制の改善で効果を維持してください</li><li><strong>次ウェーブの事故リスク</strong>は運用管理で確認でき、予防措置で確率を下げられます</li><li><strong>Wi-Fi特殊イベント</strong>：5ウェーブではWAVE 4、7ウェーブではWAVE 6に、認証情報が悪用された不審な無線LAN接続が発生する場合があります。接続異常の警告が出たら中央経路をカバーするネットワーク分離・EDRと、教育・報告体制を確認してください。イベントそのものでは直接被害は発生せず、防衛を突破した敵のみが影響します</li></ul><p style="font-size:11px">※ このゲームは教育向けに対策効果を抽象化しています。実際のサイバー攻撃手順や病院の設備構成は再現していません。</p>`,[{label:'ゲームに戻る',primary:true,action:()=>{if(wasActive){game.paused=false;refreshUI()}}}],true);
     // Restore pause state when closing by backdrop or ×, too.
     $('modalBackdrop').dataset.restorePause=wasActive?'1':'0';}
   function showResult(win){
@@ -719,7 +761,7 @@
         <div><small>情報保護</small><strong>${Math.round(game.privacy)}%</strong></div>
         <div><small>侵入数</small><strong>${game.leaks}</strong></div>
       </div>
-      <p style="font-size:11px">難易度：${Risk.profile(game.risk).name} ／ 事故：${game.risk.incidents}件 ／ 強化遅延：${game.risk.upgradeDelays}回 ／ 教育定着失敗：${game.risk.trainingFailures}回 ／ 最終定着度：${game.risk.adherence}%</p>
+      <p style="font-size:11px">難易度：${Risk.profile(game.risk).name} ／ 事故：${game.risk.incidents}件 ／ 強化遅延：${game.risk.upgradeDelays}回 ／ 教育定着失敗：${game.risk.trainingFailures}回 ／ 最終定着度：${game.risk.adherence}% ／ Wi-Fi特殊イベント：${game.risk.wifiIncidents}件（追加${game.risk.wifiThreats}件・抑制${game.risk.wifiPrevented}件）</p>
       ${reviewHTML}`;
     openModal(win?'防衛成功！ ミッション完了':'防衛失敗 — 再挑戦しよう',body,[
       {label:'同じ設定でもう一度',primary:true,action:resetGame},

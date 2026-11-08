@@ -39,6 +39,12 @@
     if((game.risk?.upgradeDelays||0)>0){
       advice.push('設備強化の遅延がありました。追加検証にSPを使う場合と、他の設備へ先に投資する場合を比較してください。');
     }
+    if((game.risk?.wifiIncidents||0)>0){
+      if((game.risk?.wifiThreats||0)>0)
+        advice.push(`Wi-Fi認証情報を利用した不審な接続から追加の脅威が${game.risk.wifiThreats}件発生。中央ルートをカバーするネットワーク分離・EDRと、早期報告の準備を振り返ってください。`);
+      else advice.push('Wi-Fiの認証情報流出は発生しましたが、拡大は阻止できました。分離・EDR・報告体制の組み合わせが別のルートでも有効か検証してください。');
+    }
+
     if(!defenseData.length){
       advice.push('設備による迎撃記録がありません。まずはルート上の射程を確認し、複数の脅威に対応できる配置を考えましょう。');
     }else{
