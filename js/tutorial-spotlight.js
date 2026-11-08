@@ -5,7 +5,7 @@
   'use strict';
   const NS='http://www.w3.org/2000/svg';
   let root,svg,mask,maskBase,shade,holes=[],rings=[],hint,titleText,tipText,countText;
-  let primary=null,secondary=null,paused=false,raf=0,until=0,last="";
+  let primary=null,secondary=null,paused=false,raf=0,last="",lastViewport="",lastTick=-Infinity;
   const $=(id)=>document.getElementById(id);
   const clamp=(v,low,high)=>Math.max(low,Math.min(high,v));
   const make=(tag,cls,parent)=>{
@@ -91,11 +91,17 @@
     hint.style.top=Math.round(best.y)+'px';
   }
   function update(){
-    if(!root||paused||!primary||$('modalBackdrop')?.classList.contains('open')){if(root)root.hidden=true;return;}
+    if(!root||paused||!primary||$('modalBackdrop')?.classList.contains('open')){
+      if(root)root.hidden=true;
+      last='';
+      return;
+    }
     const screen=dimensions(),r=visibleBounds(primary,primary.classList.contains('map-pad-btn')?15:8,screen);
-    if(!r){root.hidden=true;return;}
+    if(!r){root.hidden=true;last='';return;}
     const second=visibleBounds(secondary,5,screen);
     const bounds=second?[r,second]:[r];
+    const signature=[screen.w,screen.h,...bounds.flatMap(b=>[b.left,b.top,b.width,b.height].map(Math.round))].join(':');
+    if(!root.hidden&&signature===last)return;
     root.hidden=false;
     svg.setAttribute('viewBox',`0 0 ${screen.w} ${screen.h}`);
     mask.setAttribute('x',0);mask.setAttribute('y',0);
@@ -113,17 +119,29 @@
       style.left=Math.round(b.left)+'px';style.top=Math.round(b.top)+'px';
       style.width=Math.round(b.width)+'px';style.height=Math.round(b.height)+'px';
     }
-    const signature=bounds.map(b=>[b.left,b.top,b.width,b.height].map(Math.round).join(':')).join('/');
-    if(signature!==last){placeHint(bounds,screen);last=signature;}
+    placeHint(bounds,screen);
+    last=signature;
   }
-  function trackFor(ms=650){
-    if(raf)cancelAnimationFrame(raf);
-    until=performance.now()+ms;
-    function tick(now){
-      update();
-      raf=now<until?requestAnimationFrame(tick):0;
+  function monitor(now){
+    raf=0;
+    if(!primary||paused)return;
+    // Layout changes can complete *after* orientationchange/resize and their
+    // delayed handlers, particularly when Android browser chrome resizes.
+    // Follow the active target throughout the tutorial, not just for 900 ms.
+    const screen=dimensions(),viewport=`${screen.w}x${screen.h}`;
+    if(viewport!==lastViewport){
+      lastViewport=viewport;
+      revealTarget(primary);
+      last='';
     }
-    raf=requestAnimationFrame(tick);
+    if(now-lastTick>=80){
+      lastTick=now;
+      update();
+    }
+    raf=requestAnimationFrame(monitor);
+  }
+  function track(){
+    if(primary&&!paused&&!raf)raf=requestAnimationFrame(monitor);
   }
   function revealTarget(target){
     if(!target||target.closest('[hidden]'))return;
@@ -150,21 +168,30 @@
     countText.textContent=options.count||'';
     titleText.textContent=options.title||'次の操作';
     tipText.textContent=options.tip||'明るく表示された場所を操作してください。';
-    update();trackFor();
+    lastViewport=`${dimensions().w}x${dimensions().h}`;
+    update();track();
   }
   function hide(){
-    primary=null;secondary=null;last='';
+    primary=null;secondary=null;last='';lastViewport='';
     if(raf){cancelAnimationFrame(raf);raf=0;}
     if(root)root.hidden=true;
   }
-  function suspend(){paused=true;if(root)root.hidden=true;if(raf){cancelAnimationFrame(raf);raf=0;}}
-  function refresh(){if(primary&&!paused){update();trackFor(900);}}
+  function suspend(){
+    paused=true;last='';
+    if(root)root.hidden=true;
+    if(raf){cancelAnimationFrame(raf);raf=0;}
+  }
+  function refresh(){
+    if(!primary||paused)return;
+    update();track();
+  }
   function refreshAfterLayout(){
     if(!primary||paused)return;
-    revealTarget(primary);refresh();
-    // Mobile rotation can settle after the initial orientationchange event.
-    setTimeout(()=>{if(primary&&!paused){revealTarget(primary);refresh();}},260);
-    setTimeout(()=>{if(primary&&!paused){revealTarget(primary);refresh();}},650);
+    revealTarget(primary);
+    last='';
+    refresh();
+    // The continuous monitor also reacts if the browser completes its
+    // portrait/landscape layout several seconds after this event.
   }
   window.addEventListener('resize',refreshAfterLayout);
   window.addEventListener('orientationchange',refreshAfterLayout);
